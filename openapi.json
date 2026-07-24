@@ -1,0 +1,4571 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is up"
+          }
+        },
+        "summary": "Liveness check (no auth)",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/foundation/probes": {
+      "post": {
+        "operationId": "FoundationController_emit",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmitProbeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Emit a synthetic probe integration event",
+        "tags": [
+          "foundation"
+        ]
+      }
+    },
+    "/member-auth/otp/request": {
+      "post": {
+        "operationId": "MemberAuthController_requestOtpCode",
+        "parameters": [],
+        "responses": {
+          "202": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestOtpAcceptedResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Request a member one-time passcode",
+        "tags": [
+          "member-auth"
+        ]
+      }
+    },
+    "/member-auth/otp/verify": {
+      "post": {
+        "operationId": "MemberAuthController_verifyOtpCode",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "headers": {
+              "Set-Cookie": {
+                "description": "Sets httpOnly member session cookie (`pg_member=session_<prefix>_<secret>`).",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyOtpResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid OTP or email"
+          }
+        },
+        "summary": "Verify member one-time passcode",
+        "tags": [
+          "member-auth"
+        ]
+      }
+    },
+    "/member-auth/logout": {
+      "post": {
+        "operationId": "MemberAuthController_logout",
+        "parameters": [],
+        "responses": {
+          "204": {
+            "description": "Session revoked (if present) and cookie cleared.",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Clears `pg_member` session cookie.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Logout current member session",
+        "tags": [
+          "member-auth"
+        ]
+      }
+    },
+    "/member-auth/me": {
+      "get": {
+        "operationId": "MemberAuthController_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberMeResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid member session"
+          }
+        },
+        "summary": "Get currently authenticated member",
+        "tags": [
+          "member-auth"
+        ]
+      }
+    },
+    "/diagnostics/probe-observations/{correlationId}": {
+      "get": {
+        "operationId": "DiagnosticsController_getProbeObservation",
+        "parameters": [
+          {
+            "name": "correlationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeObservationResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Observation not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get probe observation by correlation ID",
+        "tags": [
+          "diagnostics"
+        ]
+      }
+    },
+    "/diagnostics/probe-traces/{correlationId}": {
+      "get": {
+        "operationId": "DiagnosticsController_getProbeTrace",
+        "parameters": [
+          {
+            "name": "correlationId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeTraceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get probe hop trace by correlation ID",
+        "tags": [
+          "diagnostics"
+        ]
+      }
+    },
+    "/payments": {
+      "post": {
+        "description": "Creates a one-time payment using a payment instrument and either an active price (`priceId`) or raw amount compatibility (`amount` + `currency`). Optional `description` and `metadata` are stored on the payment.",
+        "operationId": "PaymentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Payment creation payload.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a one-time payment",
+        "tags": [
+          "payments"
+        ]
+      },
+      "get": {
+        "description": "Returns payments sorted by newest first using cursor pagination. Use `page.nextCursor` as the next `cursor` value. Optional `start` and `end` filters bound `createdAt` inclusively.",
+        "operationId": "PaymentsController_list",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for payment `createdAt`. Must be >= `start` when both are provided.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for payment `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicG10XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100. If omitted, server default is used.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPaymentsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List payments for a merchant",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/payments/dashboard": {
+      "get": {
+        "description": "Returns dashboard payment cards sorted by newest first using cursor pagination. Accepts either operator bearer auth or member session auth.",
+        "operationId": "PaymentsController_listDashboard",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for payment `createdAt`. Must be >= `start` when both are provided.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for payment `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicG10XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100. If omitted, server default is used.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the dashboard list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListDashboardPaymentsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List payments for merchant dashboard",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/customers": {
+      "post": {
+        "operationId": "CustomersController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a platform customer",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "operationId": "CustomersController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a customer by id",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/customers": {
+      "post": {
+        "operationId": "MerchantCustomersController_create",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) for the owner context.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMerchantCustomerDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantScopedCustomerResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a customer linked to a merchant",
+        "tags": [
+          "customers"
+        ]
+      },
+      "get": {
+        "operationId": "MerchantCustomersController_list",
+        "parameters": [
+          {
+            "name": "hasPayments",
+            "required": false,
+            "in": "query",
+            "description": "When true, return only customers with payments for this merchant. When false, return only customers without payments.",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search across customer name and email.",
+            "schema": {
+              "example": "amina",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned from a previous page response.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0Ijoi...In19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Max number of customers to return (default service limit).",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) for customer visibility scope.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantCustomerListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List customers linked to a merchant",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/dashboard": {
+      "get": {
+        "operationId": "CustomerDashboardController_list",
+        "parameters": [
+          {
+            "name": "recentPaymentsLimit",
+            "required": false,
+            "in": "query",
+            "description": "Number of recent payments to include per customer. Maximum: 20.",
+            "schema": {
+              "example": 3,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0IjoiMjAyNi0wMy0wMVQxMjowMDowMC4wMDBaIiwiY3VzdG9tZXJJZCI6ImN1c3RfMDEuLi4ifX0=",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of customers to return. Maximum 100. If omitted, server default is used.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the dashboard list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDashboardListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List dashboard customers for a merchant",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/dashboard/{id}": {
+      "get": {
+        "operationId": "CustomerDashboardController_get",
+        "parameters": [
+          {
+            "name": "recentPaymentsLimit",
+            "required": false,
+            "in": "query",
+            "description": "Number of recent transactions to include in response. Maximum: 20.",
+            "schema": {
+              "example": 3,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope customer visibility.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Customer TypeID (`cust_...`) to fetch.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDashboardDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a single dashboard customer with recent transactions",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/tokenization/cards/{tokenId}/display": {
+      "get": {
+        "operationId": "TokenizationController_getCardDisplay",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CardDisplayResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault token not found or not a card token"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get masked card display details for a vault token",
+        "tags": [
+          "tokenization"
+        ]
+      }
+    },
+    "/tokenization/bank-accounts/{tokenId}/display": {
+      "get": {
+        "operationId": "BankAccountTokenizationController_getBankAccountDisplay",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountDisplayResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault token not found or not a bank account token"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get masked bank account display details for a vault token",
+        "tags": [
+          "tokenization"
+        ]
+      }
+    },
+    "/tokenization/tax-identifiers/{tokenId}/display": {
+      "get": {
+        "operationId": "TaxIdentifierTokenizationController_getTaxIdentifierDisplay",
+        "parameters": [
+          {
+            "name": "tokenId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaxIdentifierDisplayResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Vault token not found or not a tax identifier token"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get masked tax identifier display details for a vault token",
+        "tags": [
+          "tokenization"
+        ]
+      }
+    },
+    "/payment-instruments": {
+      "post": {
+        "operationId": "PaymentInstrumentsController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentInstrumentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Register a payment instrument for a customer",
+        "tags": [
+          "payment-instruments"
+        ]
+      }
+    },
+    "/catalog/products": {
+      "post": {
+        "operationId": "CatalogProductsController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a catalog product",
+        "tags": [
+          "catalog-products"
+        ]
+      }
+    },
+    "/catalog/products/{productId}": {
+      "get": {
+        "operationId": "CatalogProductsController_get",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a catalog product by id",
+        "tags": [
+          "catalog-products"
+        ]
+      }
+    },
+    "/catalog/prices": {
+      "post": {
+        "operationId": "CatalogPricesController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a catalog price",
+        "tags": [
+          "catalog-prices"
+        ]
+      }
+    },
+    "/catalog/prices/{priceId}/archive": {
+      "put": {
+        "operationId": "CatalogPricesController_archive",
+        "parameters": [
+          {
+            "name": "priceId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Archive an existing catalog price",
+        "tags": [
+          "catalog-prices"
+        ]
+      }
+    },
+    "/payouts": {
+      "get": {
+        "description": "Returns payouts sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively.",
+        "operationId": "PayoutsController_list",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for payout `createdAt`.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for payout `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicGF5b3V0XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPayoutsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List payouts for a merchant",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/payouts/dashboard": {
+      "get": {
+        "description": "Returns dashboard payouts sorted by newest first using cursor pagination. Uses the same listing logic as `GET /payouts`.",
+        "operationId": "PayoutsController_listDashboard",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for payout `createdAt`.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for payout `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicGF5b3V0XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListDashboardPayoutsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List payouts for merchant dashboard",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/payouts/{id}": {
+      "get": {
+        "description": "Returns a single payout by id scoped to a merchant.",
+        "operationId": "PayoutsController_getById",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Payout TypeID (`payout_...`) to fetch.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payout details",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/merchant-applications": {
+      "post": {
+        "operationId": "MerchantApplicationsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key, ISO-3166-1 alpha-2 country code (country), and optional parentMerchantId.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMerchantApplicationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft merchant application",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}": {
+      "get": {
+        "operationId": "MerchantApplicationsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a merchant application",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/business-profile": {
+      "patch": {
+        "description": "Replaces the full business profile payload for the merchant application.",
+        "operationId": "MerchantApplicationsController_patchBusinessProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Business profile patch payload with idempotency key and businessProfile object.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchBusinessProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update merchant application business profile",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/beneficial-owners": {
+      "patch": {
+        "description": "Replaces all beneficial owners for the application. Beneficial owner IDs are generated by the backend.",
+        "operationId": "MerchantApplicationsController_patchBeneficialOwners",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Beneficial owners patch payload with idempotency key and owner list.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchBeneficialOwnersDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace merchant application beneficial owners",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/payout-accounts": {
+      "patch": {
+        "description": "Replaces all payout accounts for the application in a single idempotent request. Payout account IDs are generated by the backend.",
+        "operationId": "MerchantApplicationsController_patchPayoutAccounts",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payout accounts patch payload with idempotency key and payoutAccounts array.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchPayoutAccountsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace merchant application payout accounts",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/underwriting": {
+      "patch": {
+        "description": "Replaces underwriting data fields for the merchant application.",
+        "operationId": "MerchantApplicationsController_patchUnderwriting",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Underwriting patch payload with idempotency key and underwritingData object.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchUnderwritingDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update merchant application underwriting data",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/processor-consents/{processor}": {
+      "put": {
+        "operationId": "MerchantApplicationsController_putProcessorConsent",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "processor",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record processor onboarding consent",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/submit": {
+      "post": {
+        "operationId": "MerchantApplicationsController_submit",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Submit merchant application for processor review",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/request-amendments": {
+      "post": {
+        "operationId": "MerchantApplicationsController_requestAmendmentsEndpoint",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Request amendments on a merchant application",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/approve": {
+      "post": {
+        "operationId": "MerchantApplicationsController_approve",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Approve merchant application and materialize merchant",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/fee-profile-override": {
+      "put": {
+        "description": "Sets a Finix fee profile override or clears it by sending null.",
+        "operationId": "MerchantApplicationsController_putFeeProfileOverride",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Fee profile override payload with idempotency key and optional feeProfileId.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetFeeProfileOverrideDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually set or clear fee profile override for custom pricing applications",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/merchant-applications/{id}/refresh-onboarding-state": {
+      "post": {
+        "operationId": "MerchantApplicationsController_refreshMerchantOnboardingState",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Manually refresh Finix onboarding state for this application merchant",
+        "tags": [
+          "merchant-applications"
+        ]
+      }
+    },
+    "/member/merchant-applications": {
+      "get": {
+        "operationId": "MemberMerchantApplicationsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "List merchant applications with an existing member grant for current session member",
+        "tags": [
+          "member-merchant-applications"
+        ]
+      }
+    },
+    "/member/merchant-applications/{id}": {
+      "get": {
+        "operationId": "MemberMerchantApplicationsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Get a merchant application as member",
+        "tags": [
+          "member-merchant-applications"
+        ]
+      }
+    },
+    "/member/merchant-applications/{id}/underwriting": {
+      "patch": {
+        "operationId": "MemberMerchantApplicationsController_patchUnderwriting",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Update merchant application underwriting as member",
+        "tags": [
+          "member-merchant-applications"
+        ]
+      }
+    },
+    "/member/merchants": {
+      "get": {
+        "description": "Returns an array where each element is a merchant record. The merchant ID is in `merchantId` on each array item.",
+        "operationId": "MemberMerchantsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Member-accessible merchants. `merchantId` is nested on each object in the response array.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "merchantId",
+                      "parentMerchantId",
+                      "country",
+                      "status",
+                      "legalName",
+                      "doingBusinessAs",
+                      "createdAt",
+                      "onboardedAt",
+                      "memberRole",
+                      "grantedAt"
+                    ],
+                    "properties": {
+                      "merchantId": {
+                        "type": "string",
+                        "description": "Merchant TypeID for this array item (format: mer_...).",
+                        "example": "mer_01j0memberlist"
+                      },
+                      "parentMerchantId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Parent merchant TypeID when this merchant is a child.",
+                        "example": null
+                      },
+                      "country": {
+                        "type": "string",
+                        "example": "US"
+                      },
+                      "status": {
+                        "type": "string",
+                        "example": "active"
+                      },
+                      "legalName": {
+                        "type": "string",
+                        "description": "Merchant legal business name.",
+                        "example": "Diallo Foods LLC"
+                      },
+                      "doingBusinessAs": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Merchant DBA/trade name when provided.",
+                        "example": "Diallo Foods"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-07-16T12:00:00.000Z"
+                      },
+                      "onboardedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2026-07-16T12:10:00.000Z"
+                      },
+                      "memberRole": {
+                        "type": "string",
+                        "example": "admin"
+                      },
+                      "grantedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-07-16T12:05:00.000Z"
+                      }
+                    }
+                  },
+                  "example": [
+                    {
+                      "merchantId": "mer_01j0memberlist",
+                      "parentMerchantId": null,
+                      "country": "US",
+                      "status": "active",
+                      "legalName": "Diallo Foods LLC",
+                      "doingBusinessAs": "Diallo Foods",
+                      "createdAt": "2026-07-16T12:00:00.000Z",
+                      "onboardedAt": "2026-07-16T12:10:00.000Z",
+                      "memberRole": "admin",
+                      "grantedAt": "2026-07-16T12:05:00.000Z"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid member session cookie."
+          }
+        },
+        "summary": "List merchants with an existing member grant for current session member",
+        "tags": [
+          "member-merchants"
+        ]
+      }
+    },
+    "/merchants/dashboard/home/summary-metrics": {
+      "get": {
+        "operationId": "MerchantDashboardController_getSummary",
+        "parameters": [
+          {
+            "name": "calendarMode",
+            "required": false,
+            "in": "query",
+            "description": "Optional query parameter. Defaults to gregorian when omitted.",
+            "schema": {
+              "enum": [
+                "gregorian",
+                "hijri"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "required": true,
+            "in": "query",
+            "description": "End of selected window as ISO 8601 timestamp query parameter and must be later than from.",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "required": true,
+            "in": "query",
+            "description": "Start of selected window as ISO 8601 timestamp query parameter (e.g. 2026-07-01T00:00:00.000Z).",
+            "schema": {
+              "format": "date-time",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID passed as a query parameter (format: mer_...).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantDashboardSummaryMetricsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get merchant dashboard home summary metrics for a selected window",
+        "tags": [
+          "merchant-dashboard"
+        ]
+      }
+    },
+    "/merchants/dashboard/api-keys": {
+      "get": {
+        "description": "Returns dashboard-safe API key metadata for the selected merchant.",
+        "operationId": "MerchantDashboardApiKeysController_list",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID passed as query parameter (format: mer_...).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantDashboardApiKeysResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List merchant dashboard API keys",
+        "tags": [
+          "merchant-dashboard"
+        ]
+      }
+    },
+    "/payout-accounts/dashboard": {
+      "get": {
+        "description": "Returns the current payout account for a merchant, if one exists. Supports operator bearer auth and member session auth.",
+        "operationId": "PayoutAccountsDashboardController_getCurrent",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used to scope payout account visibility.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetDashboardPayoutAccountResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get current payout account for merchant dashboard",
+        "tags": [
+          "payout-accounts"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/api-keys": {
+      "get": {
+        "operationId": "MerchantApiKeysController_list",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) owning the API keys.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListMerchantApiKeysResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List API keys for a merchant",
+        "tags": [
+          "merchant-api-keys"
+        ]
+      },
+      "post": {
+        "description": "Creates a new API key for the merchant. The plaintext key is returned only once in this response.",
+        "operationId": "MerchantApiKeysController_create",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) owning the API key.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key, required label, optional environment (defaults to test), and access mode.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMerchantApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateMerchantApiKeyResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a merchant API key",
+        "tags": [
+          "merchant-api-keys"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/api-keys/{apiKeyId}/revoke": {
+      "post": {
+        "operationId": "MerchantApiKeysController_revoke",
+        "parameters": [
+          {
+            "name": "apiKeyId",
+            "required": true,
+            "in": "path",
+            "description": "API key TypeID (`apikey_...`) to revoke.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) owning the API key.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Revoke payload with idempotency key.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeMerchantApiKeyDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeMerchantApiKeyResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke a merchant API key",
+        "tags": [
+          "merchant-api-keys"
+        ]
+      }
+    },
+    "/webhooks/finix": {
+      "post": {
+        "operationId": "FinixWebhooksController_receive",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Registration probe accepted"
+          },
+          "204": {
+            "description": "Webhook accepted"
+          }
+        },
+        "summary": "Receive Finix webhook event",
+        "tags": [
+          "webhooks"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "PayGood API",
+    "description": "",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "operator_<prefix>_<secret>",
+        "type": "http"
+      }
+    },
+    "schemas": {
+      "EmitProbeResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "emittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "correlationId",
+          "emittedAt"
+        ]
+      },
+      "RequestOtpAcceptedResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "VerifyOtpResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "authenticated"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "MemberMeResponseDto": {
+        "type": "object",
+        "properties": {
+          "memberId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "nullable": true
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+[1-9]\\d{1,14}$",
+            "nullable": true
+          }
+        },
+        "required": [
+          "memberId",
+          "email",
+          "name",
+          "phone"
+        ]
+      },
+      "ProbeObservationResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "messageId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "probeId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "correlationId",
+          "messageId",
+          "probeId",
+          "receivedAt"
+        ]
+      },
+      "ProbeTraceResponseDto": {
+        "type": "object",
+        "properties": {
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "hops": {
+            "type": "object",
+            "properties": {
+              "origin": {
+                "type": "boolean"
+              },
+              "outbox": {
+                "type": "boolean"
+              },
+              "relay": {
+                "type": "boolean"
+              },
+              "publisher": {
+                "type": "boolean"
+              },
+              "consumer": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "origin",
+              "outbox",
+              "relay",
+              "publisher",
+              "consumer"
+            ]
+          },
+          "failedHop": {
+            "type": "string",
+            "enum": [
+              "origin",
+              "outbox",
+              "relay",
+              "publisher",
+              "consumer",
+              null
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "correlationId",
+          "hops",
+          "failedHop"
+        ]
+      },
+      "CreatePaymentDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "paymentInstrumentId": {
+            "type": "string"
+          },
+          "captureMethod": {
+            "default": "automatic",
+            "type": "string",
+            "enum": [
+              "automatic",
+              "manual"
+            ]
+          },
+          "priceId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "customerId",
+          "merchantId",
+          "paymentInstrumentId"
+        ]
+      },
+      "PaymentResponseDto": {
+        "type": "object",
+        "properties": {
+          "paymentId": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "paymentInstrumentId": {
+            "type": "string"
+          },
+          "priceId": {
+            "type": "string"
+          },
+          "captureMethod": {
+            "type": "string",
+            "enum": [
+              "automatic",
+              "manual"
+            ]
+          },
+          "description": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "processor": {
+            "type": "string",
+            "enum": [
+              "finix"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "authorized",
+              "captured",
+              "completed",
+              "voided",
+              "refunded",
+              "declined"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "authorizedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "capturedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "voidedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "paymentId",
+          "idempotencyKey",
+          "customerId",
+          "merchantId",
+          "paymentInstrumentId",
+          "priceId",
+          "captureMethod",
+          "processor",
+          "amount",
+          "currency",
+          "status",
+          "createdAt"
+        ]
+      },
+      "ListPaymentsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "paymentId": {
+                  "type": "string"
+                },
+                "idempotencyKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "customerId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "paymentInstrumentId": {
+                  "type": "string"
+                },
+                "priceId": {
+                  "type": "string"
+                },
+                "captureMethod": {
+                  "type": "string",
+                  "enum": [
+                    "automatic",
+                    "manual"
+                  ]
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 1000
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "authorized",
+                    "captured",
+                    "completed",
+                    "voided",
+                    "refunded",
+                    "declined"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "authorizedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "capturedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "voidedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "paymentId",
+                "idempotencyKey",
+                "customerId",
+                "merchantId",
+                "paymentInstrumentId",
+                "priceId",
+                "captureMethod",
+                "processor",
+                "amount",
+                "currency",
+                "status",
+                "createdAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean",
+                "description": "True when another page exists after this response."
+              },
+              "nextCursor": {
+                "description": "Opaque cursor to pass as the next request `cursor` when `hasMore` is true.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "ListDashboardPaymentsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "customer": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ]
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "status": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "amount",
+                "currency",
+                "customer",
+                "date",
+                "status"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean",
+                "description": "True when another page exists after this response."
+              },
+              "nextCursor": {
+                "description": "Opaque cursor to pass as the next request `cursor` when `hasMore` is true.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "CustomerResponseDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "business"
+            ]
+          },
+          "phone": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "customerId",
+          "name",
+          "email",
+          "entityType",
+          "createdAt"
+        ]
+      },
+      "CreateMerchantCustomerDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "business"
+            ]
+          },
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "entityType",
+          "idempotencyKey"
+        ]
+      },
+      "MerchantScopedCustomerResponseDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "business"
+            ]
+          },
+          "phone": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "customerId",
+          "name",
+          "email",
+          "entityType",
+          "createdAt"
+        ]
+      },
+      "MerchantCustomerListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "customerId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "entityType": {
+                  "type": "string",
+                  "enum": [
+                    "individual",
+                    "business"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "relationshipSource": {
+                  "type": "string",
+                  "enum": [
+                    "created",
+                    "transacted"
+                  ]
+                },
+                "merchantLinkCreatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "firstSeenAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "customerId",
+                "name",
+                "email",
+                "entityType",
+                "createdAt",
+                "relationshipSource",
+                "merchantLinkCreatedAt",
+                "firstSeenAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "CustomerDashboardListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "customerId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "lifetimeSpend": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "recentPayments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "paymentDate": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status",
+                      "amount",
+                      "paymentDate"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "customerId",
+                "name",
+                "email",
+                "lifetimeSpend",
+                "recentPayments"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "CustomerDashboardDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "lifetimeSpend": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "recentTransactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "paymentDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "amount",
+                "paymentDate"
+              ]
+            }
+          }
+        },
+        "required": [
+          "customerId",
+          "name",
+          "email",
+          "lifetimeSpend",
+          "recentTransactions"
+        ]
+      },
+      "CardDisplayResponseDto": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "type": "string"
+          },
+          "last4": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4
+          },
+          "expiryMonth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12
+          },
+          "expiryYear": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "brand",
+          "last4",
+          "expiryMonth",
+          "expiryYear"
+        ]
+      },
+      "BankAccountDisplayResponseDto": {
+        "type": "object",
+        "properties": {
+          "last4": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4
+          },
+          "scheme": {
+            "type": "string",
+            "enum": [
+              "us_domestic",
+              "ca_eft",
+              "gb_domestic",
+              "iban"
+            ]
+          },
+          "bankName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "last4",
+          "scheme"
+        ]
+      },
+      "TaxIdentifierDisplayResponseDto": {
+        "type": "object",
+        "properties": {
+          "last4": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 4
+          },
+          "kind": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "last4"
+        ]
+      },
+      "PaymentInstrumentResponseDto": {
+        "type": "object",
+        "properties": {
+          "paymentInstrumentId": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "card",
+              "bank_account"
+            ]
+          },
+          "displayDetails": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "card"
+                    ]
+                  },
+                  "brand": {
+                    "type": "string"
+                  },
+                  "last4": {
+                    "type": "string"
+                  },
+                  "expiryMonth": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "expiryYear": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "kind",
+                  "brand",
+                  "last4",
+                  "expiryMonth",
+                  "expiryYear"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "bank_account"
+                    ]
+                  },
+                  "last4": {
+                    "type": "string"
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "enum": [
+                      "us_domestic",
+                      "ca_eft",
+                      "gb_domestic",
+                      "iban"
+                    ]
+                  },
+                  "bankName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "last4",
+                  "scheme"
+                ]
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "active",
+              "failed",
+              "disabled"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "paymentInstrumentId",
+          "type",
+          "displayDetails",
+          "status",
+          "createdAt"
+        ]
+      },
+      "ProductResponseDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "productId",
+          "merchantId",
+          "name",
+          "active",
+          "createdAt"
+        ]
+      },
+      "PriceResponseDto": {
+        "type": "object",
+        "properties": {
+          "priceId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "one_time",
+              "recurring"
+            ]
+          },
+          "interval": {
+            "type": "string"
+          },
+          "archivedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "priceId",
+          "merchantId",
+          "amount",
+          "currency",
+          "type",
+          "createdAt"
+        ]
+      },
+      "ListPayoutsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "payoutAccountId": {
+                  "type": "string"
+                },
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "processorReference": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "sent",
+                    "paid",
+                    "failed"
+                  ]
+                },
+                "sentAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "paidAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "failedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "grossAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "feeAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "netAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "failureCode": {
+                  "type": "string"
+                },
+                "failureMessage": {
+                  "type": "string"
+                },
+                "failureReason": {
+                  "type": "string",
+                  "enum": [
+                    "bank_account_closed",
+                    "insufficient_funds",
+                    "invalid_account",
+                    "account_frozen_or_restricted",
+                    "compliance_or_risk_blocked",
+                    "processor_unavailable",
+                    "unknown"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "merchantId",
+                "payoutAccountId",
+                "processor",
+                "processorReference",
+                "status",
+                "grossAmount",
+                "feeAmount",
+                "netAmount",
+                "currency",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "ListDashboardPayoutsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "payoutAccountId": {
+                  "type": "string"
+                },
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "processorReference": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "sent",
+                    "paid",
+                    "failed"
+                  ]
+                },
+                "sentAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "paidAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "failedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "grossAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "feeAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "netAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "failureCode": {
+                  "type": "string"
+                },
+                "failureMessage": {
+                  "type": "string"
+                },
+                "failureReason": {
+                  "type": "string",
+                  "enum": [
+                    "bank_account_closed",
+                    "insufficient_funds",
+                    "invalid_account",
+                    "account_frozen_or_restricted",
+                    "compliance_or_risk_blocked",
+                    "processor_unavailable",
+                    "unknown"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "merchantId",
+                "payoutAccountId",
+                "processor",
+                "processorReference",
+                "status",
+                "grossAmount",
+                "feeAmount",
+                "netAmount",
+                "currency",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "PayoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "payoutAccountId": {
+            "type": "string"
+          },
+          "processor": {
+            "type": "string",
+            "enum": [
+              "finix"
+            ]
+          },
+          "processorReference": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "sent",
+              "paid",
+              "failed"
+            ]
+          },
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "failedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "grossAmount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "feeAmount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "netAmount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "failureCode": {
+            "type": "string"
+          },
+          "failureMessage": {
+            "type": "string"
+          },
+          "failureReason": {
+            "type": "string",
+            "enum": [
+              "bank_account_closed",
+              "insufficient_funds",
+              "invalid_account",
+              "account_frozen_or_restricted",
+              "compliance_or_risk_blocked",
+              "processor_unavailable",
+              "unknown"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "merchantId",
+          "payoutAccountId",
+          "processor",
+          "processorReference",
+          "status",
+          "grossAmount",
+          "feeAmount",
+          "netAmount",
+          "currency",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateMerchantApplicationDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "enum": [
+              "US",
+              "CA"
+            ]
+          },
+          "parentMerchantId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "PatchBusinessProfileDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "country": {
+            "type": "string",
+            "enum": [
+              "US",
+              "CA"
+            ]
+          },
+          "businessProfile": {
+            "type": "object",
+            "properties": {
+              "legalName": {
+                "type": "string"
+              },
+              "doingBusinessAs": {
+                "type": "string"
+              },
+              "businessType": {
+                "type": "string",
+                "enum": [
+                  "individual_sole_proprietorship",
+                  "corporation",
+                  "limited_liability_company",
+                  "partnership",
+                  "non_profit",
+                  "government"
+                ]
+              },
+              "businessTaxId": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "basistheory"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider"
+                ]
+              },
+              "email": {
+                "type": "string"
+              },
+              "businessPhone": {
+                "type": "string"
+              },
+              "website": {
+                "type": "string"
+              },
+              "registeredAddress": {
+                "type": "object",
+                "properties": {
+                  "line1": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "line2": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "postalCode": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "US",
+                      "CA"
+                    ]
+                  }
+                },
+                "required": [
+                  "line1",
+                  "city",
+                  "postalCode"
+                ]
+              },
+              "defaultStatementDescriptor": {
+                "type": "string"
+              },
+              "mcc": {
+                "type": "string"
+              },
+              "ownershipType": {
+                "type": "string",
+                "enum": [
+                  "public",
+                  "private"
+                ]
+              },
+              "annualCardVolume": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "maxTransactionAmount": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "achMaxTransactionAmount": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "hasAcceptedCreditCardsPreviously": {
+                "type": "boolean"
+              },
+              "incorporationDate": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 31
+                  },
+                  "month": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "day",
+                  "month",
+                  "year"
+                ]
+              }
+            },
+            "required": [
+              "legalName",
+              "businessType",
+              "email",
+              "registeredAddress"
+            ]
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "businessProfile"
+        ]
+      },
+      "PatchBeneficialOwnersDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "beneficialOwners": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "firstName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "lastName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dateOfBirth": {
+                  "type": "object",
+                  "properties": {
+                    "day": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 31
+                    },
+                    "month": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1900,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "day",
+                    "month",
+                    "year"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "ownershipPercent": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "personalAddress": {
+                  "type": "object",
+                  "properties": {
+                    "line1": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "line2": {
+                      "type": "string"
+                    },
+                    "city": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "region": {
+                      "type": "string"
+                    },
+                    "postalCode": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "country": {
+                      "type": "string",
+                      "minLength": 2
+                    }
+                  },
+                  "required": [
+                    "line1",
+                    "city",
+                    "postalCode",
+                    "country"
+                  ]
+                },
+                "taxId": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "basistheory"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider"
+                  ]
+                },
+                "phone": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                }
+              },
+              "required": [
+                "firstName",
+                "lastName",
+                "dateOfBirth",
+                "ownershipPercent"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "beneficialOwners"
+        ]
+      },
+      "PatchPayoutAccountsDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "payoutAccounts": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "accountType": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "business"
+                  ]
+                },
+                "accountHolderName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "vaultToken": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "basistheory"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider"
+                  ]
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                }
+              },
+              "required": [
+                "accountType",
+                "accountHolderName",
+                "vaultToken"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "payoutAccounts"
+        ]
+      },
+      "PatchUnderwritingDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "underwritingData": {
+            "type": "object",
+            "properties": {
+              "averageCardTransferAmount": {
+                "type": "number"
+              },
+              "averageAchTransferAmount": {
+                "type": "number"
+              },
+              "annualAchVolume": {
+                "type": "number"
+              },
+              "businessDescription": {
+                "type": "string"
+              },
+              "cardVolumeDistribution": {
+                "type": "object",
+                "properties": {
+                  "cardPresentPercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "ecommercePercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "mailOrderTelephonePercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                }
+              },
+              "refundPolicy": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "underwritingData"
+        ]
+      },
+      "SetFeeProfileOverrideDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "feeProfileId": {
+            "type": "string",
+            "pattern": "^FP[A-Za-z0-9]+$",
+            "nullable": true
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "MerchantDashboardSummaryMetricsResponseDto": {
+        "type": "object",
+        "properties": {
+          "dataPoints": {
+            "minItems": 3,
+            "maxItems": 3,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "enum": [
+                    "total_volume",
+                    "transaction_count",
+                    "average_transaction_amount"
+                  ]
+                },
+                "amount": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "number"
+                    },
+                    "currency": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "trend": {
+                  "type": "number",
+                  "description": "Normalized change ratio from -1 to 1 for the selected window versus the previous window. Unitless ratio (not percent): 1 = +100% change, 0.5 = +50%, 0 = no change, -0.25 = -25%, -1 = -100%."
+                }
+              },
+              "required": [
+                "title",
+                "amount",
+                "trend"
+              ]
+            }
+          }
+        },
+        "required": [
+          "dataPoints"
+        ]
+      },
+      "MerchantDashboardApiKeysResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "apiKeyId": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "key": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "revoked"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "lastUsedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "apiKeyId",
+                "label",
+                "key",
+                "status",
+                "createdAt",
+                "lastUsedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "GetDashboardPayoutAccountResponseDto": {
+        "type": "object",
+        "properties": {
+          "payoutAccount": {
+            "type": "object",
+            "properties": {
+              "payoutAccountId": {
+                "type": "string"
+              },
+              "accountType": {
+                "type": "string",
+                "enum": [
+                  "personal",
+                  "business"
+                ]
+              },
+              "accountHolderName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "displayDetails": {
+                "type": "object",
+                "properties": {
+                  "last4": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "scheme": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "bankName": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "last4",
+                  "scheme"
+                ]
+              },
+              "currency": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending_verification",
+                  "active",
+                  "disabled"
+                ]
+              }
+            },
+            "required": [
+              "payoutAccountId",
+              "accountType",
+              "accountHolderName",
+              "displayDetails",
+              "currency",
+              "status"
+            ],
+            "nullable": true
+          }
+        },
+        "required": [
+          "payoutAccount"
+        ]
+      },
+      "ListMerchantApiKeysResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "apiKeyId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "environment": {
+                  "type": "string",
+                  "enum": [
+                    "test",
+                    "live"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "revoked"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "revokedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "lastUsedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "prefix": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "capabilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "required": [
+                "apiKeyId",
+                "merchantId",
+                "label",
+                "environment",
+                "status",
+                "createdAt",
+                "revokedAt",
+                "lastUsedAt",
+                "prefix",
+                "capabilities"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateMerchantApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "environment": {
+            "default": "test",
+            "type": "string",
+            "enum": [
+              "test",
+              "live"
+            ]
+          },
+          "accessMode": {
+            "type": "string",
+            "enum": [
+              "read_only",
+              "write"
+            ]
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "label",
+          "accessMode"
+        ]
+      },
+      "CreateMerchantApiKeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "apiKeyId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "test",
+              "live"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "prefix": {
+            "type": "string",
+            "minLength": 1
+          },
+          "capabilities": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "accessMode": {
+            "type": "string",
+            "enum": [
+              "read_only",
+              "write"
+            ]
+          },
+          "apiKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "apiKeyId",
+          "merchantId",
+          "label",
+          "environment",
+          "status",
+          "createdAt",
+          "revokedAt",
+          "lastUsedAt",
+          "prefix",
+          "capabilities",
+          "accessMode",
+          "apiKey"
+        ]
+      },
+      "RevokeMerchantApiKeyDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "RevokeMerchantApiKeyResponseDto": {
+        "type": "object",
+        "properties": {
+          "apiKeyId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "revoked"
+            ]
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "apiKeyId",
+          "merchantId",
+          "status",
+          "revokedAt"
+        ]
+      }
+    }
+  }
+}
