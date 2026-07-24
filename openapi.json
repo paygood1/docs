@@ -416,6 +416,131 @@
         ]
       }
     },
+    "/customers/dashboard": {
+      "get": {
+        "operationId": "CustomerDashboardController_list",
+        "parameters": [
+          {
+            "name": "recentPaymentsLimit",
+            "required": false,
+            "in": "query",
+            "description": "Number of recent payments to include per customer. Maximum: 20.",
+            "schema": {
+              "example": 3,
+              "type": "number"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0IjoiMjAyNi0wMy0wMVQxMjowMDowMC4wMDBaIiwiY3VzdG9tZXJJZCI6ImN1c3RfMDEuLi4ifX0=",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of customers to return. Maximum 100. If omitted, server default is used.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the dashboard list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDashboardListResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List dashboard customers for a merchant",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
+    "/customers/dashboard/{id}": {
+      "get": {
+        "operationId": "CustomerDashboardController_get",
+        "parameters": [
+          {
+            "name": "recentPaymentsLimit",
+            "required": false,
+            "in": "query",
+            "description": "Number of recent transactions to include in response. Maximum: 20.",
+            "schema": {
+              "example": 3,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope customer visibility.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Customer TypeID (`cust_...`) to fetch.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerDashboardDetailResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a single dashboard customer with recent transactions",
+        "tags": [
+          "customers"
+        ]
+      }
+    },
     "/customers": {
       "post": {
         "operationId": "CustomersController_create",
@@ -596,131 +721,6 @@
           }
         ],
         "summary": "List customers linked to a merchant",
-        "tags": [
-          "customers"
-        ]
-      }
-    },
-    "/customers/dashboard": {
-      "get": {
-        "operationId": "CustomerDashboardController_list",
-        "parameters": [
-          {
-            "name": "recentPaymentsLimit",
-            "required": false,
-            "in": "query",
-            "description": "Number of recent payments to include per customer. Maximum: 20.",
-            "schema": {
-              "example": 3,
-              "type": "number"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0IjoiMjAyNi0wMy0wMVQxMjowMDowMC4wMDBaIiwiY3VzdG9tZXJJZCI6ImN1c3RfMDEuLi4ifX0=",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of customers to return. Maximum 100. If omitted, server default is used.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope the dashboard list.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDashboardListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List dashboard customers for a merchant",
-        "tags": [
-          "customers"
-        ]
-      }
-    },
-    "/customers/dashboard/{id}": {
-      "get": {
-        "operationId": "CustomerDashboardController_get",
-        "parameters": [
-          {
-            "name": "recentPaymentsLimit",
-            "required": false,
-            "in": "query",
-            "description": "Number of recent transactions to include in response. Maximum: 20.",
-            "schema": {
-              "example": 3,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope customer visibility.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Customer TypeID (`cust_...`) to fetch.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDashboardDetailResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a single dashboard customer with recent transactions",
         "tags": [
           "customers"
         ]
@@ -2102,7 +2102,16 @@
     "contact": {}
   },
   "tags": [],
-  "servers": [],
+  "servers": [
+    {
+      "url": "https://api-sandbox.paygood.co",
+      "description": "Sandbox"
+    },
+    {
+      "url": "https://api.paygood.co",
+      "description": "Production"
+    }
+  ],
   "components": {
     "securitySchemes": {
       "bearer": {
@@ -2654,6 +2663,156 @@
           "page"
         ]
       },
+      "CustomerDashboardListResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "customerId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "lifetimeSpend": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "recentPayments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string"
+                      },
+                      "amount": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "paymentDate": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "status",
+                      "amount",
+                      "paymentDate"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "customerId",
+                "name",
+                "email",
+                "lifetimeSpend",
+                "recentPayments"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "CustomerDashboardDetailResponseDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "lifetimeSpend": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "recentTransactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "paymentDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "status",
+                "amount",
+                "paymentDate"
+              ]
+            }
+          }
+        },
+        "required": [
+          "customerId",
+          "name",
+          "email",
+          "lifetimeSpend",
+          "recentTransactions"
+        ]
+      },
       "CustomerResponseDto": {
         "type": "object",
         "properties": {
@@ -2847,156 +3006,6 @@
         "required": [
           "items",
           "page"
-        ]
-      },
-      "CustomerDashboardListResponseDto": {
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "customerId": {
-                  "type": "string"
-                },
-                "name": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "email": {
-                  "type": "string",
-                  "format": "email",
-                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-                },
-                "lifetimeSpend": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "recentPayments": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "status": {
-                        "type": "string"
-                      },
-                      "amount": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      },
-                      "paymentDate": {
-                        "type": "string",
-                        "format": "date-time",
-                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                      },
-                      "description": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "id",
-                      "status",
-                      "amount",
-                      "paymentDate"
-                    ]
-                  }
-                }
-              },
-              "required": [
-                "customerId",
-                "name",
-                "email",
-                "lifetimeSpend",
-                "recentPayments"
-              ]
-            }
-          },
-          "page": {
-            "type": "object",
-            "properties": {
-              "hasMore": {
-                "type": "boolean"
-              },
-              "nextCursor": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "hasMore"
-            ]
-          }
-        },
-        "required": [
-          "items",
-          "page"
-        ]
-      },
-      "CustomerDashboardDetailResponseDto": {
-        "type": "object",
-        "properties": {
-          "customerId": {
-            "type": "string"
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
-          "email": {
-            "type": "string",
-            "format": "email",
-            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-          },
-          "lifetimeSpend": {
-            "type": "integer",
-            "minimum": -9007199254740991,
-            "maximum": 9007199254740991
-          },
-          "recentTransactions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "status": {
-                  "type": "string"
-                },
-                "amount": {
-                  "type": "integer",
-                  "minimum": -9007199254740991,
-                  "maximum": 9007199254740991
-                },
-                "paymentDate": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                },
-                "description": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "id",
-                "status",
-                "amount",
-                "paymentDate"
-              ]
-            }
-          }
-        },
-        "required": [
-          "customerId",
-          "name",
-          "email",
-          "lifetimeSpend",
-          "recentTransactions"
         ]
       },
       "CardDisplayResponseDto": {
