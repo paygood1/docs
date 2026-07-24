@@ -1,0 +1,98 @@
+---
+title: "Create a Catalog Product with POST /catalog/products"
+sidebarTitle: "Create Product"
+description: "Create a product in your PayGood catalog to define what you sell. Attach one or more prices to a product for use in payment requests."
+---
+
+`POST /catalog/products` creates a new product in your PayGood catalog. A product represents what you're selling — a subscription plan, a physical good, a one-time service, or anything else. Products don't have a cost on their own; you attach one or more prices to a product to define how much to charge and how often.
+
+## Endpoint
+
+```
+POST https://api.paygood.com/catalog/products
+```
+
+## Request body parameters
+
+<ParamField body="merchantId" type="string" required>
+  The TypeID of the merchant creating the product. Begins with `mer_`.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  A human-readable name for the product, e.g. `Premium Plan` or `Annual Subscription`. This is displayed in receipts and the PayGood dashboard.
+</ParamField>
+
+<ParamField body="description" type="string">
+  An optional description of the product. Use this to provide more context about what the customer is purchasing.
+</ParamField>
+
+## Example
+
+```bash
+curl -X POST https://api.paygood.com/catalog/products \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "merchantId": "mer_01hxy...",
+    "name": "Premium Plan",
+    "description": "Access to all premium features"
+  }'
+```
+
+## Response example
+
+```json
+{
+  "productId": "prod_01hxy...",
+  "merchantId": "mer_01hxy...",
+  "name": "Premium Plan",
+  "description": "Access to all premium features",
+  "active": true,
+  "createdAt": "2026-03-15T10:00:00.000Z"
+}
+```
+
+---
+
+## Retrieving a product
+
+You can fetch an existing product at any time by its `productId`. Pass the `merchantId` as a query parameter to scope the lookup to your merchant account.
+
+```
+GET https://api.paygood.com/catalog/products/{productId}?merchantId=...
+```
+
+```bash
+curl 'https://api.paygood.com/catalog/products/prod_01hxy...?merchantId=mer_01hxy...' \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+The response is the same `ProductResponseDto` shape returned when you created the product.
+
+---
+
+## Response fields
+
+<ResponseField name="productId" type="string">
+  The unique TypeID for the product. Begins with `prod_`. Use this when creating prices or referencing the product in other API calls.
+</ResponseField>
+
+<ResponseField name="merchantId" type="string">
+  The TypeID of the merchant that owns this product.
+</ResponseField>
+
+<ResponseField name="name" type="string">
+  The product's display name.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  The product description, or `null` if none was provided.
+</ResponseField>
+
+<ResponseField name="active" type="boolean">
+  Whether the product is currently active. New products are `true` by default.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the product was created.
+</ResponseField>

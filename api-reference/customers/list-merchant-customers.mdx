@@ -1,0 +1,115 @@
+---
+title: "GET /merchants/{merchantId}/customers — List Customers"
+sidebarTitle: "List Merchant Customers"
+description: "List all customers linked to a merchant, with relationship metadata. Returns paginated results including when each customer was first linked."
+---
+
+`GET /merchants/{merchantId}/customers` returns all customers associated with a merchant, including relationship metadata such as when each customer was first linked and how the relationship was established. Results are paginated and can be iterated using the cursor returned in each response.
+
+```
+GET https://api.paygood.com/merchants/{merchantId}/customers
+```
+
+## Path parameters
+
+<ParamField path="merchantId" type="string" required>
+  The TypeID of the merchant whose customers you want to list (`mer_...`).
+</ParamField>
+
+## Request example
+
+```bash
+curl https://api.paygood.com/merchants/mer_01hxy8m1nqk9g3x3y3p0azq2bg/customers \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+Advance to the next page using a cursor from a previous response:
+
+```bash
+curl -G https://api.paygood.com/merchants/mer_01hxy8m1nqk9g3x3y3p0azq2bg/customers \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  --data-urlencode 'cursor=eyJ2IjoxLCJsYXN0SWQiOiJjdXNfMDFoeHk4bTFucWs5ZzN4M3kzcDBhenEyYmcifQ=='
+```
+
+## Response fields
+
+The response contains an `items` array of merchant-customer objects and a `page` object for pagination.
+
+<ResponseField name="items" type="array">
+  An array of customer objects associated with this merchant. Each object contains the following fields.
+
+  <Expandable title="Customer object fields">
+    <ResponseField name="customerId" type="string">
+      The unique TypeID of the customer (`cus_...`).
+    </ResponseField>
+
+    <ResponseField name="name" type="string">
+      The full name of the customer.
+    </ResponseField>
+
+    <ResponseField name="email" type="string">
+      The email address on file for this customer.
+    </ResponseField>
+
+    <ResponseField name="entityType" type="string">
+      The entity type: `individual` or `business`.
+    </ResponseField>
+
+    <ResponseField name="createdAt" type="string">
+      ISO-8601 timestamp of when the customer record was originally created on the platform.
+    </ResponseField>
+
+    <ResponseField name="relationshipSource" type="string">
+      How this customer became associated with the merchant. For example, `created` means the customer was created directly under this merchant via `POST /merchants/{merchantId}/customers`.
+    </ResponseField>
+
+    <ResponseField name="merchantLinkCreatedAt" type="string">
+      ISO-8601 timestamp of when the link between this customer and the merchant was established.
+    </ResponseField>
+
+    <ResponseField name="firstSeenAt" type="string">
+      ISO-8601 timestamp of when this customer was first seen in the context of this merchant (e.g., their first payment or initial link).
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="page" type="object">
+  Pagination metadata for the current result set.
+
+  <Expandable title="Page object fields">
+    <ResponseField name="hasMore" type="boolean">
+      `true` if there are additional pages beyond the current one.
+    </ResponseField>
+
+    <ResponseField name="nextCursor" type="string">
+      An opaque cursor to supply as the `cursor` query parameter in your next request. `null` when you have reached the last page.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Response example
+
+```json
+{
+  "items": [
+    {
+      "customerId": "cus_01hxy8m1nqk9g3x3y3p0azq2bg",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "entityType": "individual",
+      "createdAt": "2026-03-15T10:00:00.000Z",
+      "relationshipSource": "created",
+      "merchantLinkCreatedAt": "2026-03-15T10:00:00.000Z",
+      "firstSeenAt": "2026-03-15T10:00:00.000Z"
+    }
+  ],
+  "page": {
+    "hasMore": false,
+    "nextCursor": null
+  }
+}
+```
+
+## Pagination
+
+For a full guide on paginating through results, see the [Pagination reference](/api-reference/pagination).

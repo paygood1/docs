@@ -1,0 +1,163 @@
+---
+title: "Create a One-Time Payment — PayGood Payments API"
+sidebarTitle: "Create Payment"
+description: "Create a one-time payment charge for a customer using a registered payment instrument. Supports automatic and manual capture methods."
+---
+
+Use `POST /payments` to charge a customer's payment instrument. Payments can be captured automatically at creation — moving straight to `captured` — or authorized first and captured later using the `manual` capture method.
+
+```
+POST https://api.paygood.com/payments
+```
+
+## Request body
+
+<ParamField body="idempotencyKey" type="string" required>
+  A unique key you generate for this request. If you retry with the same key, PayGood returns the original response instead of creating a duplicate payment.
+</ParamField>
+
+<ParamField body="customerId" type="string" required>
+  The TypeID of the customer being charged (`cus_...`).
+</ParamField>
+
+<ParamField body="merchantId" type="string" required>
+  The TypeID of the merchant receiving the payment (`mer_...`).
+</ParamField>
+
+<ParamField body="paymentInstrumentId" type="string" required>
+  The TypeID of the payment instrument to charge (`pi_...`). The instrument must already be registered to the customer.
+</ParamField>
+
+<ParamField body="priceId" type="string" required>
+  The TypeID of the price from your catalog (`prc_...`).
+</ParamField>
+
+<ParamField body="amount" type="integer" required>
+  The charge amount in the smallest currency unit. For USD and CAD, this is cents — for example, `5000` represents $50.00.
+</ParamField>
+
+<ParamField body="currency" type="string" required>
+  The three-letter ISO 4217 currency code. Supported values: `USD`, `CAD`.
+</ParamField>
+
+<ParamField body="captureMethod" type="string" required>
+  Controls when funds are captured. Use `automatic` to capture immediately at creation, or `manual` to authorize the funds now and capture them in a separate step later.
+</ParamField>
+
+## Request example
+
+```bash
+curl -X POST https://api.paygood.com/payments \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "idempotencyKey": "pmt-unique-001",
+    "customerId": "cus_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "priceId": "prc_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "amount": 5000,
+    "currency": "USD",
+    "captureMethod": "automatic"
+  }'
+```
+
+## Response fields
+
+<ResponseField name="paymentId" type="string">
+  The unique TypeID assigned to this payment (`pmt_...`).
+</ResponseField>
+
+<ResponseField name="idempotencyKey" type="string">
+  The idempotency key you supplied in the request.
+</ResponseField>
+
+<ResponseField name="customerId" type="string">
+  The TypeID of the customer who was charged.
+</ResponseField>
+
+<ResponseField name="merchantId" type="string">
+  The TypeID of the merchant who received the payment.
+</ResponseField>
+
+<ResponseField name="paymentInstrumentId" type="string">
+  The TypeID of the payment instrument that was charged.
+</ResponseField>
+
+<ResponseField name="priceId" type="string">
+  The TypeID of the price associated with this payment.
+</ResponseField>
+
+<ResponseField name="captureMethod" type="string">
+  The capture method used: `automatic` or `manual`.
+</ResponseField>
+
+<ResponseField name="processor" type="string">
+  Indicates which payment processor handled this transaction.
+</ResponseField>
+
+<ResponseField name="amount" type="integer">
+  The charged amount in the smallest currency unit (e.g., cents).
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  The three-letter ISO currency code for this payment (`USD` or `CAD`).
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  The current status of the payment. See [Payment statuses](#payment-statuses) below.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO-8601 timestamp of when the payment was created.
+</ResponseField>
+
+<ResponseField name="authorizedAt" type="string">
+  ISO-8601 timestamp of when the payment was authorized. `null` if not yet authorized.
+</ResponseField>
+
+<ResponseField name="capturedAt" type="string">
+  ISO-8601 timestamp of when the payment was captured. `null` if not yet captured.
+</ResponseField>
+
+<ResponseField name="voidedAt" type="string">
+  ISO-8601 timestamp of when the payment was voided. `null` if the payment was not voided.
+</ResponseField>
+
+## Response example
+
+```json
+{
+  "paymentId": "pmt_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "idempotencyKey": "pmt-unique-001",
+  "customerId": "cus_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "priceId": "prc_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "captureMethod": "automatic",
+  "processor": "payment_network",
+  "amount": 5000,
+  "currency": "USD",
+  "status": "captured",
+  "createdAt": "2026-03-15T12:00:00.000Z",
+  "authorizedAt": "2026-03-15T12:00:01.000Z",
+  "capturedAt": "2026-03-15T12:00:01.000Z",
+  "voidedAt": null
+}
+```
+
+## Payment statuses
+
+| Status | Description |
+|---|---|
+| `pending` | The payment has been created and is being processed. |
+| `authorized` | Funds have been reserved on the customer's payment instrument. Only applies to `manual` capture payments. |
+| `captured` | Funds have been successfully captured and the transaction is complete. |
+| `completed` | The payment lifecycle is fully complete, including any post-capture settlement steps. |
+| `voided` | The payment authorization was cancelled before capture. No funds were moved. |
+| `refunded` | The captured funds were returned to the customer. |
+| `declined` | The payment was rejected by the payment processor or the issuing bank. |
+
+<Tip>
+  For `automatic` capture, the payment moves directly to `captured` as soon as it is created. For `manual` capture, the payment stays in `authorized` until you explicitly capture or void it.
+</Tip>

@@ -1,0 +1,88 @@
+---
+title: "PUT /catalog/prices/{priceId}/archive — Archive a Price"
+sidebarTitle: "Archive Price"
+description: "Permanently archive a catalog price in PayGood to stop it from being used in new payments. Archiving is immediate and irreversible."
+---
+
+`PUT /catalog/prices/{priceId}/archive` archives a price so it can no longer be referenced in new payments. Use archiving to retire outdated pricing — for example, when you update a subscription price or run a limited-time promotion. Existing payments and subscriptions that were created with the price are not affected by archiving it.
+
+<Warning>
+  Archiving is irreversible. Once a price is archived, it cannot be restored or reactivated. If you need to offer the same price again, create a new price with the same amount, currency, and billing type.
+</Warning>
+
+## Endpoint
+
+```
+PUT https://api.paygood.com/catalog/prices/{priceId}/archive
+```
+
+## Path parameters
+
+<ParamField path="priceId" type="string" required>
+  The TypeID of the price to archive. Begins with `prc_`.
+</ParamField>
+
+## Example
+
+```bash
+curl -X PUT https://api.paygood.com/catalog/prices/prc_01hxy.../archive \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+## Response
+
+The response is a `PriceResponseDto` with `archivedAt` set to the timestamp when the archive operation completed. All other fields reflect the price's state at the time of archiving.
+
+## Response fields
+
+<ResponseField name="priceId" type="string">
+  The unique TypeID for the archived price.
+</ResponseField>
+
+<ResponseField name="merchantId" type="string">
+  The TypeID of the merchant that owns this price.
+</ResponseField>
+
+<ResponseField name="productId" type="string">
+  The TypeID of the product this price was attached to.
+</ResponseField>
+
+<ResponseField name="amount" type="integer">
+  The charge amount in the smallest currency unit (cents for USD and CAD).
+</ResponseField>
+
+<ResponseField name="currency" type="string">
+  The ISO 4217 currency code, e.g. `USD` or `CAD`.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  The billing type: `one_time` or `recurring`.
+</ResponseField>
+
+<ResponseField name="interval" type="string">
+  The billing interval for recurring prices, or `null` for one-time prices.
+</ResponseField>
+
+<ResponseField name="archivedAt" type="string">
+  ISO 8601 timestamp of when the price was archived. This field is `null` on active prices and populated after archiving.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the price was originally created.
+</ResponseField>
+
+## Response example
+
+```json
+{
+  "priceId": "prc_01hxy...",
+  "merchantId": "mer_01hxy...",
+  "productId": "prod_01hxy...",
+  "amount": 2999,
+  "currency": "USD",
+  "type": "one_time",
+  "interval": null,
+  "archivedAt": "2026-03-15T10:00:00.000Z",
+  "createdAt": "2026-01-01T09:00:00.000Z"
+}
+```

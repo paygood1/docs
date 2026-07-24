@@ -1,0 +1,104 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "PayGood",
+  "theme": "luma",
+  "colors": {
+    "primary": "#ef7025",
+    "light": "#eec9bc",
+    "dark": "#4fa1ab"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "guides/api-keys",
+              "guides/authentication"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-payment",
+              "guides/manage-customers",
+              "guides/payment-instruments",
+              "guides/catalog-products-prices"
+            ]
+          },
+          {
+            "group": "Merchant Onboarding",
+            "pages": [
+              "guides/merchant-onboarding-overview",
+              "guides/merchant-application"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview",
+              "api-reference/authentication",
+              "api-reference/pagination",
+              "api-reference/errors"
+            ]
+          },
+          {
+            "group": "Payments",
+            "pages": [
+              "api-reference/payments/create-payment",
+              "api-reference/payments/list-payments"
+            ]
+          },
+          {
+            "group": "Customers",
+            "pages": [
+              "api-reference/customers/create-customer",
+              "api-reference/customers/get-customer",
+              "api-reference/customers/list-merchant-customers"
+            ]
+          },
+          {
+            "group": "Payment Instruments",
+            "pages": [
+              "api-reference/payment-instruments/overview",
+              "api-reference/payment-instruments/register-instrument",
+              "api-reference/payment-instruments/tokenization"
+            ]
+          },
+          {
+            "group": "Catalog",
+            "pages": [
+              "api-reference/catalog/create-product",
+              "api-reference/catalog/create-price",
+              "api-reference/catalog/archive-price"
+            ]
+          },
+          {
+            "group": "Merchant Applications",
+            "pages": [
+              "api-reference/merchant-applications/create",
+              "api-reference/merchant-applications/update",
+              "api-reference/merchant-applications/submit"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Get Started",
+      "href": "/introduction"
+    }
+  }
+}

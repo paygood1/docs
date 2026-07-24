@@ -1,0 +1,62 @@
+---
+title: "PayGood: REST API for Payments and Merchant Onboarding"
+sidebarTitle: "Home"
+description: "Accept payments, manage customers, and onboard merchants with the PayGood REST API. Built for developers who need reliable, flexible payment processing."
+---
+
+PayGood is a payments platform API that gives you everything you need to collect payments, manage customers, and handle merchant onboarding — all through a single, well-structured REST interface. Whether you're charging a one-time payment or building a full marketplace, PayGood provides the building blocks.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/guides/first-payment">
+    Take your first payment in minutes with a step-by-step walkthrough.
+  </Card>
+  <Card title="API Keys" icon="key" href="/guides/api-keys">
+    Set up your API credentials and authenticate your first request.
+  </Card>
+  <Card title="API Reference" icon="code" href="/api-reference/overview">
+    Full reference for every endpoint — payments, customers, catalog, and more.
+  </Card>
+  <Card title="Merchant Onboarding" icon="building" href="/guides/merchant-onboarding-overview">
+    Guide your merchants through the KYB application and approval process.
+  </Card>
+</CardGroup>
+
+## Get up and running
+
+<Steps>
+  <Step title="Get your API key">
+    Retrieve your bearer token from the PayGood dashboard. You'll use it to authenticate every API request.
+  </Step>
+  <Step title="Create a customer">
+    Register the person or business you're charging as a customer in PayGood.
+  </Step>
+  <Step title="Register a payment instrument">
+    Attach a tokenized card or bank account to the customer so you have a way to charge them.
+  </Step>
+  <Step title="Create a payment">
+    Call `POST /payments` with the customer, instrument, and amount to process the charge.
+  </Step>
+</Steps>
+
+## Core concepts
+
+<CardGroup cols={3}>
+  <Card title="Payments" icon="credit-card" href="/api-reference/payments/create-payment">
+    One-time charges with automatic or manual capture.
+  </Card>
+  <Card title="Customers" icon="users" href="/api-reference/customers/create-customer">
+    Represent individuals or businesses you transact with.
+  </Card>
+  <Card title="Payment Instruments" icon="wallet" href="/api-reference/payment-instruments/overview">
+    Tokenized cards and bank accounts linked to customers.
+  </Card>
+  <Card title="Catalog" icon="tag" href="/api-reference/catalog/create-product">
+    Products and prices you can attach to payments.
+  </Card>
+  <Card title="Authentication" icon="shield" href="/guides/authentication">
+    Bearer token authentication for every API call.
+  </Card>
+  <Card title="Pagination" icon="list" href="/api-reference/pagination">
+    Cursor-based pagination for all list endpoints.
+  </Card>
+</CardGroup>

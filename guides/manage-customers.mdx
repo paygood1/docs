@@ -1,0 +1,133 @@
+---
+title: "Create and Manage Your Customers Using the PayGood API"
+sidebarTitle: "Customers"
+description: "Learn how to create platform customers and merchant-scoped customers, retrieve customer records, and list customers linked to a merchant."
+---
+
+Customers represent the people or businesses you transact with through PayGood. A customer can be scoped globally as a platform customer, or linked directly to a specific merchant. Understanding this distinction helps you model your integration correctly from the start.
+
+<Note>
+  Use `"individual"` for `entityType` when the customer is a person, and `"business"` when the customer represents a company or organization.
+</Note>
+
+## Platform customers vs merchant customers
+
+PayGood gives you two ways to create a customer depending on how your platform is structured.
+
+A **platform customer** is created at the top level of your account and is not tied to any single merchant. This is useful when a single customer may transact with multiple merchants on your platform, or when you manage customer identity centrally.
+
+A **merchant customer** is scoped to a specific merchant. Use this model when each merchant manages their own customer relationships independently, or when you need to isolate customer data per merchant for compliance or operational reasons.
+
+Both customer types share the same fields and respond with the same customer record shape.
+
+## Create a customer
+
+Send a `POST /customers` request to create a platform-level customer. Include an `idempotencyKey` to make the request safely retryable.
+
+```bash
+curl -X POST https://api.paygood.com/customers \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "entityType": "individual",
+    "phone": "+15551234567",
+    "idempotencyKey": "cust-create-001"
+  }'
+```
+
+PayGood returns the created customer record with a unique `customerId`.
+
+```json
+{
+  "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "entityType": "individual",
+  "phone": "+15551234567",
+  "createdAt": "2024-06-01T12:00:00Z"
+}
+```
+
+## Create a merchant-scoped customer
+
+To create a customer scoped to a specific merchant, use `POST /merchants/{merchantId}/customers`. Pass the merchant's ID in the URL path — the request body is identical to the platform customer request.
+
+```bash
+curl -X POST https://api.paygood.com/merchants/mer_01hxy8m1nqk9g3x3y3p0azq2bg/customers \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "name": "Acme Corp",
+    "email": "billing@acmecorp.com",
+    "entityType": "business",
+    "phone": "+15559876543",
+    "idempotencyKey": "cust-create-002"
+  }'
+```
+
+```json
+{
+  "customerId": "cus_01hxy5n3prk9h4y4z4q1bar2dg",
+  "name": "Acme Corp",
+  "email": "billing@acmecorp.com",
+  "entityType": "business",
+  "phone": "+15559876543",
+  "createdAt": "2024-06-01T12:05:00Z"
+}
+```
+
+## Retrieve a customer
+
+Fetch a customer record at any time by their `customerId` using `GET /customers/{id}`.
+
+```bash
+curl -X GET https://api.paygood.com/customers/cus_01hxy4m2nqk9g3x3y3p0azq1cf \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+```json
+{
+  "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+  "name": "Jane Smith",
+  "email": "jane@example.com",
+  "entityType": "individual",
+  "phone": "+15551234567",
+  "createdAt": "2024-06-01T12:00:00Z"
+}
+```
+
+## List merchant customers
+
+To retrieve all customers linked to a specific merchant, use `GET /merchants/{merchantId}/customers`. Results are returned as a paginated list.
+
+```bash
+curl -X GET https://api.paygood.com/merchants/mer_01hxy8m1nqk9g3x3y3p0azq2bg/customers \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+The response contains an `items` array and a `page` object for cursor-based pagination.
+
+```json
+{
+  "items": [
+    {
+      "customerId": "cus_01hxy5n3prk9h4y4z4q1bar2dg",
+      "name": "Acme Corp",
+      "email": "billing@acmecorp.com",
+      "entityType": "business",
+      "createdAt": "2024-06-01T12:05:00Z",
+      "relationshipSource": "direct",
+      "merchantLinkCreatedAt": "2024-06-01T12:05:00Z",
+      "firstSeenAt": "2024-06-01T12:05:00Z"
+    }
+  ],
+  "page": {
+    "hasMore": false,
+    "nextCursor": null
+  }
+}
+```
+
+Pass the `nextCursor` value as a query parameter on your next request to fetch the following page of results. For full pagination details, see the [Pagination reference](/api-reference/pagination).

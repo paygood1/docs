@@ -1,0 +1,53 @@
+---
+title: "How to Set Up and Manage Your PayGood API Keys"
+sidebarTitle: "API Keys"
+description: "Learn how to create, store, and protect your PayGood API keys so you can securely authenticate every request to the payments API."
+---
+
+PayGood uses API keys — bearer tokens — to authenticate every request you make to the API. Your key identifies your account and authorizes all API calls made on your behalf. Keep your key safe and never share it publicly.
+
+## Get your API key
+
+<Steps>
+  <Step title="Log in to the PayGood dashboard">
+    Go to [dashboard.paygood.com](https://dashboard.paygood.com) and sign in with your PayGood account credentials.
+  </Step>
+  <Step title="Navigate to Settings > API Keys">
+    In the left-hand navigation, click **Settings**, then select **API Keys** from the submenu.
+  </Step>
+  <Step title="Create a new key and copy it immediately">
+    Click **Create API Key**, give it a descriptive name (for example, `Production – Backend Server`), and click **Generate**. Copy the key as soon as it appears — PayGood displays the full secret only once and cannot retrieve it afterward. If you lose the key, you must rotate it and generate a new one.
+  </Step>
+  <Step title="Store your key securely">
+    Save the key in a secure location such as an environment variable or a secrets manager (for example, AWS Secrets Manager, HashiCorp Vault, or your CI/CD platform's secret store). Never paste it directly into your source code.
+  </Step>
+</Steps>
+
+## Live keys vs. sandbox keys
+
+PayGood provides two types of API keys to keep your development and production environments separate:
+
+- **Live keys** — Used in your production environment. Requests made with a live key move real money.
+- **Sandbox keys** — Used during development and testing. No real funds are transferred, so you can safely experiment without affecting live transactions.
+
+You can identify which type of key you are using by its label in the PayGood dashboard. Always use a sandbox key in your development and staging environments, and reserve your live key strictly for production traffic.
+
+## Set your key as an environment variable
+
+Store your API key in an environment variable rather than hardcoding it in your application. For example, in a Unix shell:
+
+```bash
+export PAYGOOD_API_KEY="your_api_key_here"
+```
+
+Your application can then read the key from the environment at runtime:
+
+```javascript
+const apiKey = process.env.PAYGOOD_API_KEY;
+```
+
+<Warning>
+  **Protect your API keys.** Never commit keys to source control — even in private repositories. Rotate any key that you suspect has been exposed. Use separate keys for your sandbox and production environments so a leaked sandbox key cannot affect live transactions.
+</Warning>
+
+Once you have your key, learn how to pass it on every API request in the [Authentication guide](/guides/authentication).

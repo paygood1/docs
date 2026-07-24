@@ -1,0 +1,149 @@
+---
+title: "Manage Your Product Catalog and Prices with PayGood"
+sidebarTitle: "Products & Prices"
+description: "Set up your PayGood product catalog by creating products and reusable prices, then attach them to payments to streamline your billing workflow."
+---
+
+The PayGood catalog lets you define products and prices that you can reference when creating payments. Rather than embedding amounts and descriptions directly in each payment request, you build a catalog once and reuse it — keeping your pricing organized, auditable, and easy to update.
+
+<Note>
+  All amounts are in the smallest currency unit. For USD and CAD, that means cents: `2999` equals $29.99.
+</Note>
+
+## Products
+
+A product represents what you are selling — it holds a human-readable name and an optional description. Products belong to a merchant and act as a container for one or more prices.
+
+Create a product with `POST /catalog/products`.
+
+```bash
+curl -X POST https://api.paygood.com/catalog/products \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "name": "Premium Plan",
+    "description": "Access to all premium features"
+  }'
+```
+
+PayGood returns the created product record with a unique `productId`.
+
+```json
+{
+  "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "name": "Premium Plan",
+  "description": "Access to all premium features",
+  "active": true,
+  "createdAt": "2024-06-01T09:00:00Z"
+}
+```
+
+## Prices
+
+A price is attached to a product and defines the charge amount, currency, and billing type. A single product can have multiple prices — for example, a monthly price and an annual price for the same plan.
+
+Create a one-time price with `POST /catalog/prices`.
+
+```bash
+curl -X POST https://api.paygood.com/catalog/prices \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+    "amount": 2999,
+    "currency": "USD",
+    "type": "one_time"
+  }'
+```
+
+```json
+{
+  "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
+  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+  "amount": 2999,
+  "currency": "USD",
+  "type": "one_time",
+  "createdAt": "2024-06-01T09:01:00Z"
+}
+```
+
+For subscription billing, set `type` to `"recurring"` and include an `interval` field that defines the billing cadence (for example, `"monthly"` or `"yearly"`).
+
+```bash
+curl -X POST https://api.paygood.com/catalog/prices \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+    "amount": 2999,
+    "currency": "USD",
+    "type": "recurring",
+    "interval": "monthly"
+  }'
+```
+
+```json
+{
+  "priceId": "prc_01hxyf2w5xn9o1f1g1x8ihu9kn",
+  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+  "amount": 2999,
+  "currency": "USD",
+  "type": "recurring",
+  "interval": "monthly",
+  "createdAt": "2024-06-01T09:02:00Z"
+}
+```
+
+## Archiving a price
+
+When you stop using a price — for example, after a pricing change — archive it with `PUT /catalog/prices/{priceId}/archive`. Archiving does not affect payments that already reference the price; it only prevents the price from being attached to new payments.
+
+```bash
+curl -X PUT https://api.paygood.com/catalog/prices/prc_01hxy7r5osk9j6a6b6s3dcr4fi/archive \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+The response returns the updated price record with `archivedAt` set to the current timestamp.
+
+```json
+{
+  "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
+  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+  "amount": 2999,
+  "currency": "USD",
+  "type": "one_time",
+  "archivedAt": "2024-07-01T00:00:00Z",
+  "createdAt": "2024-06-01T09:01:00Z"
+}
+```
+
+<Warning>
+  Once a price is archived, you cannot un-archive it. Create a new price if you need to reintroduce the same amount and billing type.
+</Warning>
+
+## Using prices in payments
+
+Reference a `priceId` in your `POST /payments` request to attach the defined amount and currency to the charge. This eliminates the need to pass raw `amount` and `currency` values on every payment and ensures your charges stay in sync with your catalog.
+
+```bash
+curl -X POST https://api.paygood.com/payments \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "idempotencyKey": "pay-unique-002",
+    "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+    "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
+    "captureMethod": "automatic"
+  }'
+```
+
+For a full end-to-end walkthrough that includes customer creation, instrument registration, and submitting a payment, see [Take Your First Payment](/guides/first-payment).

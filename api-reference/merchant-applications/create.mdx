@@ -1,0 +1,88 @@
+---
+title: "POST /merchant-applications — Create a Draft Application"
+sidebarTitle: "Create Application"
+description: "Start a new merchant KYB application in PayGood. Creates a draft application you can fill in incrementally before submitting for review."
+---
+
+`POST /merchant-applications` creates a draft merchant application. The application goes through several update steps — business profile, beneficial owners, payout accounts, and underwriting data — before you submit it for review.
+
+## Endpoint
+
+```
+POST https://api.paygood.com/merchant-applications
+```
+
+## Request body parameters
+
+<ParamField body="idempotencyKey" type="string" required>
+  A unique key you provide to make this request idempotent. If you retry the request with the same key, the server returns the original response instead of creating a duplicate application.
+</ParamField>
+
+<ParamField body="country" type="string">
+  ISO 3166-1 alpha-2 country code for the merchant's country of operation. Supported values: `US`, `CA`.
+</ParamField>
+
+<ParamField body="parentMerchantId" type="string">
+  TypeID of the parent merchant. Provide this when creating a sub-merchant under an existing merchant hierarchy. Omit or pass `null` for standalone merchants.
+</ParamField>
+
+## Example request
+
+```bash
+curl -X POST https://api.paygood.com/merchant-applications \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "idempotencyKey": "app-create-001",
+    "country": "US",
+    "parentMerchantId": null
+  }'
+```
+
+## Example response
+
+```json
+{
+  "id": "mapp_01hxy4k2e3f5g6h7j8k9m0n1p",
+  "status": "draft",
+  "country": "US",
+  "parentMerchantId": null,
+  "createdAt": "2024-06-01T12:00:00Z",
+  "updatedAt": "2024-06-01T12:00:00Z"
+}
+```
+
+<Note>
+  Save the `id` from the response — you'll use it for all subsequent update and submission calls.
+</Note>
+
+## Response fields
+
+<ResponseField name="id" type="string">
+  The unique identifier for the merchant application (e.g. `mapp_01hxy...`). Use this ID in all subsequent PATCH and submit requests.
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  Current status of the application. Newly created applications always start as `draft`.
+</ResponseField>
+
+<ResponseField name="country" type="string">
+  ISO 3166-1 alpha-2 country code associated with this application.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the application was created.
+</ResponseField>
+
+## Retrieving an application
+
+At any point you can fetch the current state of an application using its ID.
+
+```bash
+curl https://api.paygood.com/merchant-applications/mapp_01hxy4k2e3f5g6h7j8k9m0n1p \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+## Next steps
+
+Once you have a draft application ID, proceed to fill in the required sections. See [Update Application](/api-reference/merchant-applications/update) for details on adding a business profile, beneficial owners, payout accounts, and underwriting data.

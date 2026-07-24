@@ -1,0 +1,128 @@
+{
+  "projectType": "api-service",
+  "projectName": "PayGood",
+  "projectDescription": "PayGood is a payments platform API that enables merchants to accept payments, manage customers, and handle onboarding through a single REST API.",
+  "theme": "luma",
+  "primaryColor": "#ef7025",
+  "lightColor": "#eec9bc",
+  "darkColor": "#4fa1ab",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Guides",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "guides/api-keys",
+              "guides/authentication"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/first-payment",
+              "guides/manage-customers",
+              "guides/payment-instruments",
+              "guides/catalog-products-prices"
+            ]
+          },
+          {
+            "group": "Merchant Onboarding",
+            "pages": [
+              "guides/merchant-onboarding-overview",
+              "guides/merchant-application"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api-reference/overview",
+              "api-reference/authentication",
+              "api-reference/pagination",
+              "api-reference/errors"
+            ]
+          },
+          {
+            "group": "Payments",
+            "pages": [
+              "api-reference/payments/create-payment",
+              "api-reference/payments/list-payments"
+            ]
+          },
+          {
+            "group": "Customers",
+            "pages": [
+              "api-reference/customers/create-customer",
+              "api-reference/customers/get-customer",
+              "api-reference/customers/list-merchant-customers"
+            ]
+          },
+          {
+            "group": "Payment Instruments",
+            "pages": [
+              "api-reference/payment-instruments/overview",
+              "api-reference/payment-instruments/register-instrument",
+              "api-reference/payment-instruments/tokenization"
+            ]
+          },
+          {
+            "group": "Catalog",
+            "pages": [
+              "api-reference/catalog/create-product",
+              "api-reference/catalog/create-price",
+              "api-reference/catalog/archive-price"
+            ]
+          },
+          {
+            "group": "Merchant Applications",
+            "pages": [
+              "api-reference/merchant-applications/create",
+              "api-reference/merchant-applications/update",
+              "api-reference/merchant-applications/submit"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "One-time payment processing with automatic or manual capture",
+    "Customer management with merchant-scoped visibility",
+    "Tokenized payment instruments (cards and bank accounts)",
+    "Product and price catalog with one-time and recurring pricing",
+    "Full merchant onboarding and KYB application flow",
+    "Cursor-based pagination for all list endpoints",
+    "Idempotency keys for safe request retries",
+    "Multi-currency support (USD, CAD)"
+  ],
+  "publicApiSurface": [
+    "POST /payments",
+    "GET /payments",
+    "POST /customers",
+    "GET /customers/{id}",
+    "POST /merchants/{merchantId}/customers",
+    "GET /merchants/{merchantId}/customers",
+    "POST /payment-instruments",
+    "GET /tokenization/cards/{tokenId}/display",
+    "GET /tokenization/bank-accounts/{tokenId}/display",
+    "POST /catalog/products",
+    "GET /catalog/products/{productId}",
+    "POST /catalog/prices",
+    "PUT /catalog/prices/{priceId}/archive",
+    "POST /merchant-applications",
+    "GET /merchant-applications/{id}",
+    "PATCH /merchant-applications/{id}/business-profile",
+    "PATCH /merchant-applications/{id}/beneficial-owners",
+    "PATCH /merchant-applications/{id}/payout-accounts",
+    "PATCH /merchant-applications/{id}/underwriting",
+    "POST /merchant-applications/{id}/submit",
+    "GET /merchants/dashboard/home/summary-metrics"
+  ]
+}

@@ -1,0 +1,112 @@
+---
+title: "Cursor-Based Pagination in the PayGood REST API"
+sidebarTitle: "Pagination"
+description: "PayGood list endpoints use cursor-based pagination. Learn how to use page.nextCursor and query parameters to efficiently iterate through large result sets."
+---
+
+PayGood list endpoints return results in pages using cursor-based pagination. Each response includes a `page` object that tells you whether more results exist and provides a cursor to fetch the next page. This approach is stable and efficient — even if records are created or deleted between requests, your place in the list is preserved.
+
+## Response shape
+
+Every list endpoint returns an `items` array alongside a `page` object:
+
+```json
+{
+  "items": [...],
+  "page": {
+    "hasMore": true,
+    "nextCursor": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicG10XzAxLi4uIn19"
+  }
+}
+```
+
+- `page.hasMore` — `true` when additional pages exist beyond the current one.
+- `page.nextCursor` — an opaque string you pass as the `cursor` query parameter on your next request. This field is omitted when `hasMore` is `false`.
+
+## Request parameters
+
+Include these query parameters to control pagination and filtering:
+
+| Parameter | Type   | Description                                                                 |
+|-----------|--------|-----------------------------------------------------------------------------|
+| `cursor`  | string | Opaque cursor from a previous `page.nextCursor`. Omit for the first page.  |
+| `limit`   | number | Number of items per page. Maximum 100.                                      |
+| `start`   | string | ISO-8601 lower bound for `createdAt` filter (inclusive).                   |
+| `end`     | string | ISO-8601 upper bound for `createdAt` filter (inclusive).                   |
+
+<Note>
+  Treat cursors as opaque tokens — do not parse or construct them manually. Their internal format may change without notice.
+</Note>
+
+## Iterating pages
+
+### Using curl
+
+Fetch the first page by calling the endpoint without a `cursor`:
+
+```bash
+curl 'https://api.paygood.com/payments?limit=50' \
+  -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+When `page.hasMore` is `true`, take the `page.nextCursor` value from the response and pass it as the `cursor` query parameter in your next request:
+
+```bash
+curl 'https://api.paygood.com/payments?limit=50&cursor=eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicG10XzAxLi4uIn19' \
+  -H 'Authorization: Bearer YOUR_API_KEY'
+```
+
+Repeat until `page.hasMore` is `false`.
+
+### Using JavaScript
+
+The following example fetches all pages from a list endpoint and collects every item into a single array:
+
+```javascript
+async function fetchAllPages(baseUrl, apiKey) {
+  const allItems = [];
+  let cursor = null;
+
+  do {
+    const url = new URL(baseUrl);
+    url.searchParams.set('limit', '100');
+    if (cursor) {
+      url.searchParams.set('cursor', cursor);
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Request failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+    allItems.push(...data.items);
+
+    cursor = data.page.hasMore ? data.page.nextCursor : null;
+  } while (cursor !== null);
+
+  return allItems;
+}
+
+// Usage — replace with your actual API key from the PayGood dashboard
+const payments = await fetchAllPages(
+  'https://api.paygood.com/payments',
+  'YOUR_API_KEY'
+);
+console.log(`Fetched ${payments.length} payments`);
+```
+
+### Filtering by date range
+
+Use `start` and `end` to restrict results to a specific time window. Both parameters filter on the `createdAt` field and accept ISO-8601 timestamps:
+
+```bash
+curl 'https://api.paygood.com/payments?start=2026-01-01T00:00:00Z&end=2026-01-31T23:59:59Z&limit=100' \
+  -H 'Authorization: Bearer YOUR_API_KEY'
+```

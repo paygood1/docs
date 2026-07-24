@@ -1,0 +1,159 @@
+---
+title: "POST /payment-instruments — Register a Payment Instrument"
+sidebarTitle: "Register Instrument"
+description: "Register a tokenized card or bank account as a reusable payment instrument for a customer in PayGood so you can charge them later."
+---
+
+`POST /payment-instruments` registers a tokenized card or bank account for a customer. The instrument becomes available for charging once its status transitions to `active`. You must obtain a vault token from Basis Theory before calling this endpoint — PayGood never accepts raw card or account numbers.
+
+## Endpoint
+
+```
+POST https://api.paygood.com/payment-instruments
+```
+
+## Request body parameters
+
+<ParamField body="customerId" type="string" required>
+  The TypeID of the customer to attach this instrument to. Begins with `cus_`.
+</ParamField>
+
+<ParamField body="merchantId" type="string" required>
+  The TypeID of the merchant registering the instrument. Begins with `mer_`.
+</ParamField>
+
+<ParamField body="type" type="string" required>
+  The instrument type. One of `card` or `bank_account`.
+</ParamField>
+
+<ParamField body="vaultToken" type="object" required>
+  A vault token obtained from Basis Theory representing the customer's sensitive payment data.
+
+  <Expandable title="vaultToken fields">
+    <ParamField body="id" type="string" required>
+      The vault token ID issued by Basis Theory.
+    </ParamField>
+
+    <ParamField body="provider" type="string" required>
+      The token provider. Always `"basistheory"`.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Examples
+
+**Register a card instrument:**
+
+```bash
+curl -X POST https://api.paygood.com/payment-instruments \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customerId": "cus_01hxy...",
+    "merchantId": "mer_01hxy...",
+    "type": "card",
+    "vaultToken": {
+      "id": "tok_basistheory_abc123",
+      "provider": "basistheory"
+    }
+  }'
+```
+
+**Register a bank account instrument:**
+
+```bash
+curl -X POST https://api.paygood.com/payment-instruments \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "customerId": "cus_01hxy...",
+    "merchantId": "mer_01hxy...",
+    "type": "bank_account",
+    "vaultToken": {
+      "id": "tok_basistheory_def456",
+      "provider": "basistheory"
+    }
+  }'
+```
+
+## Response fields
+
+<ResponseField name="paymentInstrumentId" type="string">
+  The unique TypeID for the registered payment instrument. Begins with `pi_`. Use this ID when creating payments.
+</ResponseField>
+
+<ResponseField name="type" type="string">
+  The instrument type: `card` or `bank_account`.
+</ResponseField>
+
+<ResponseField name="displayDetails" type="object">
+  Masked, non-sensitive details about the underlying payment method. The shape depends on the instrument `type`.
+
+  <Expandable title="displayDetails fields">
+    <ResponseField name="kind" type="string">
+      Matches the instrument type: `card` or `bank_account`.
+    </ResponseField>
+
+    **Card fields** (`kind: "card"`):
+
+    <ResponseField name="brand" type="string">
+      The card network brand, e.g. `Visa`, `Mastercard`, `Amex`.
+    </ResponseField>
+
+    <ResponseField name="last4" type="string">
+      The last four digits of the card number.
+    </ResponseField>
+
+    <ResponseField name="expiryMonth" type="integer">
+      The card's expiry month (1–12).
+    </ResponseField>
+
+    <ResponseField name="expiryYear" type="integer">
+      The card's four-digit expiry year, e.g. `2028`.
+    </ResponseField>
+
+    **Bank account fields** (`kind: "bank_account"`):
+
+    <ResponseField name="last4" type="string">
+      The last four digits of the bank account number.
+    </ResponseField>
+
+    <ResponseField name="scheme" type="string">
+      The payment scheme. One of `us_domestic`, `ca_eft`, `gb_domestic`, or `iban`.
+    </ResponseField>
+
+    <ResponseField name="bankName" type="string">
+      The name of the bank, e.g. `Chase`, `TD Bank`.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  The instrument's current status. One of `pending`, `active`, `failed`, or `disabled`. The instrument can be charged only when `active`.
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+  ISO 8601 timestamp of when the instrument was registered.
+</ResponseField>
+
+## Response example
+
+```json
+{
+  "paymentInstrumentId": "pi_01hxy...",
+  "type": "card",
+  "displayDetails": {
+    "kind": "card",
+    "brand": "Visa",
+    "last4": "4242",
+    "expiryMonth": 12,
+    "expiryYear": 2028
+  },
+  "status": "active",
+  "createdAt": "2026-03-15T10:00:00.000Z"
+}
+```
+
+<Note>
+  Store the `paymentInstrumentId` from the response — you'll use it when creating payments. You do not need to store the vault token ID after registration; PayGood resolves it for you at charge time.
+</Note>

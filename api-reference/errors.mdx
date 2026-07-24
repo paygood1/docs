@@ -1,0 +1,91 @@
+---
+title: "PayGood API Error Codes, Responses, and Retry Strategy"
+sidebarTitle: "Errors"
+description: "Learn how PayGood returns errors, what each HTTP status code means, how to read the JSON error body, and when to retry failed requests safely."
+---
+
+PayGood returns standard HTTP status codes alongside a JSON error body on every response. Successful requests return `2xx` status codes; client errors return `4xx`; server errors return `5xx`. Always check the status code first, then inspect the response body for details.
+
+## HTTP status codes
+
+| Status | Meaning               | Common cause                                          |
+|--------|-----------------------|-------------------------------------------------------|
+| `200`  | OK                    | GET or read operation succeeded.                      |
+| `201`  | Created               | POST request succeeded and a new resource was created.|
+| `204`  | No Content            | DELETE or logout operation succeeded. No body is returned. |
+| `400`  | Bad Request           | Missing required fields or validation failure.        |
+| `401`  | Unauthorized          | Missing or invalid API key.                           |
+| `404`  | Not Found             | The ID doesn't exist or you don't have access to it.  |
+| `409`  | Conflict              | Idempotency key already used with different parameters.|
+| `422`  | Unprocessable Entity  | Business rule violation — payment declined or invalid state transition. |
+| `500`  | Internal Server Error | Unexpected server error. Retry with exponential backoff.|
+
+## Error response body
+
+All error responses include a JSON body with at minimum a `statusCode` and `message`:
+
+```json
+{
+  "statusCode": 400,
+  "message": "idempotencyKey is required",
+  "error": "Bad Request"
+}
+```
+
+- `statusCode` — mirrors the HTTP status code of the response.
+- `message` — a human-readable description of what went wrong. Read this field first when debugging.
+- `error` — a short string label for the error class (not always present on all responses).
+
+<Tip>
+  Log the full error response body — the `message` field usually explains exactly what went wrong and what you need to fix.
+</Tip>
+
+## Idempotency and retries
+
+When you receive a `5xx` error, the operation may or may not have been applied on the server. Retry these requests using exponential backoff and include the **same `idempotencyKey`** you used in the original request. This guarantees the server processes the operation exactly once, even across multiple attempts.
+
+```json
+{
+  "idempotencyKey": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "amount": 1000,
+  "currency": "USD"
+}
+```
+
+**Do not retry `4xx` errors.** A `4xx` response means the request itself is invalid — retrying it with the same parameters will produce the same error. Fix the underlying issue (authentication, missing fields, business logic) before sending a new request.
+
+A safe retry strategy:
+
+```javascript
+async function requestWithRetry(url, options, maxRetries = 3) {
+  let attempt = 0;
+
+  while (attempt <= maxRetries) {
+    const response = await fetch(url, options);
+
+    // Success — return immediately
+    if (response.ok) return response;
+
+    const status = response.status;
+
+    // Client error — do not retry
+    if (status >= 400 && status < 500) {
+      const body = await response.json();
+      throw new Error(`Client error ${status}: ${body.message}`);
+    }
+
+    // Server error — retry with backoff
+    if (attempt === maxRetries) {
+      throw new Error(`Server error ${status} after ${maxRetries} retries`);
+    }
+
+    const delay = Math.pow(2, attempt) * 500; // 500ms, 1s, 2s, ...
+    await new Promise((resolve) => setTimeout(resolve, delay));
+    attempt++;
+  }
+}
+```
+
+<Info>
+  A `409 Conflict` response means your idempotency key was already used with different request parameters. Generate a new key and resubmit — do not reuse the conflicting key.
+</Info>

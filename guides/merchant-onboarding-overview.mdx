@@ -1,0 +1,49 @@
+---
+title: "PayGood Merchant Onboarding: A Complete Overview"
+sidebarTitle: "Onboarding Overview"
+description: "Understand the PayGood merchant onboarding process — from creating a draft application to processor approval and live payment processing."
+---
+
+The PayGood merchant onboarding flow lets you bring new merchants onto the platform. Each merchant goes through a Know Your Business (KYB) application before they can process live payments. Once approved, the merchant is activated and ready to accept payments through PayGood.
+
+## Onboarding stages
+
+Work through each stage in order. Later steps depend on the application `id` returned when you create the draft.
+
+1. **Create a draft application** — Open a new application for the merchant and receive an application ID.
+2. **Fill in the business profile** — Provide legal name, business type, email, and registered address.
+3. **Add beneficial owners** — Supply identity information for every individual who owns more than 25% of the business.
+4. **Add payout accounts** — Link the bank account where PayGood will settle funds.
+5. **Provide underwriting data** — Share estimated processing volumes and a description of the merchant's business.
+6. **Submit for review** — Send the completed application to PayGood's underwriting team.
+7. **Approval and activation** — Once approved, the merchant account is activated and live payment processing can begin.
+
+## What you'll need
+
+Gather the following information before starting the application:
+
+- Business legal name and any doing-business-as (DBA) name
+- Business type (e.g., corporation, LLC, sole proprietorship)
+- Registered business address
+- Business tax ID, vaulted as a token via Basis Theory
+- Beneficial owner details: full name, date of birth, personal address, and ownership percentage for each owner with more than 25% stake
+- Payout bank account details, vaulted as a token via Basis Theory
+- Estimated annual card processing volume and maximum transaction amount
+- Estimated card volume distribution (card-present, e-commerce, mail order/telephone)
+
+## Supported countries
+
+PayGood currently supports merchant onboarding in the following countries:
+
+| Country | Code |
+|---------|------|
+| United States | `US` |
+| Canada | `CA` |
+
+Country codes follow the [ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) standard. Pass the appropriate code in the `country` field when creating a draft application.
+
+<Note>
+  Sensitive data like tax IDs and bank account numbers must be tokenized before sending to PayGood. Use [Basis Theory](https://basistheory.com) to vault these fields and pass the resulting token object — `{"id": "tok_...", "provider": "basistheory"}` — in place of the raw value.
+</Note>
+
+Ready to get started? Follow the step-by-step [Application Walkthrough](/guides/merchant-application) to create and submit your first merchant application.

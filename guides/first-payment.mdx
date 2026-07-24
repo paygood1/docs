@@ -1,0 +1,170 @@
+---
+title: "Make Your First Payment: A Step-by-Step PayGood Guide"
+sidebarTitle: "First Payment"
+description: "Walk through processing your first payment with PayGood: create a customer, register a payment instrument, and submit a completed charge."
+---
+
+This guide walks you through processing your first payment with PayGood. By the end, you will have created a customer, registered a payment instrument, and completed a charge.
+
+<Note>
+  You need an API key before following this guide. See [Set Up Your API Keys](/guides/api-keys) to generate one.
+</Note>
+
+<Steps>
+  <Step title="Create a customer">
+    Every payment must be linked to a customer. Send a `POST /customers` request with the customer's name, email, and entity type.
+
+    ```bash
+    curl -X POST https://api.paygood.com/customers \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "name": "Jane Smith",
+        "email": "jane@example.com",
+        "entityType": "individual",
+        "phone": "+15551234567",
+        "idempotencyKey": "cust-create-001"
+      }'
+    ```
+
+    Save the `customerId` from the response — you'll need it in the next steps.
+
+    ```json
+    {
+      "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "entityType": "individual",
+      "phone": "+15551234567",
+      "createdAt": "2024-06-01T12:00:00Z"
+    }
+    ```
+  </Step>
+
+  <Step title="Register a payment instrument">
+    A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with your vault provider (Basis Theory) first, then pass the resulting token to PayGood.
+
+    ```bash
+    curl -X POST https://api.paygood.com/payment-instruments \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+        "type": "card",
+        "vaultToken": {
+          "id": "tok_01hxy9n3prk9h4y4z4q1bar3ch",
+          "provider": "basistheory"
+        }
+      }'
+    ```
+
+    Save the `paymentInstrumentId` from the response.
+
+    ```json
+    {
+      "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+      "type": "card",
+      "displayDetails": {
+        "kind": "card",
+        "brand": "visa",
+        "last4": "4242",
+        "expiryMonth": 12,
+        "expiryYear": 2027
+      },
+      "status": "active",
+      "createdAt": "2024-06-01T12:01:00Z"
+    }
+    ```
+  </Step>
+
+  <Step title="Create a price (recommended)">
+    Define a reusable price in your catalog so you can reference it on payments without hard-coding amounts each time.
+
+    ```bash
+    curl -X POST https://api.paygood.com/catalog/prices \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+        "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+        "amount": 5000,
+        "currency": "USD",
+        "type": "one_time"
+      }'
+    ```
+
+    Save the `priceId` from the response.
+
+    ```json
+    {
+      "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
+      "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+      "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+      "amount": 5000,
+      "currency": "USD",
+      "type": "one_time",
+      "createdAt": "2024-06-01T12:02:00Z"
+    }
+    ```
+  </Step>
+
+  <Step title="Create a payment">
+    You have everything you need. Submit the payment using the IDs you collected in the previous steps.
+
+    ```bash
+    curl -X POST https://api.paygood.com/payments \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "idempotencyKey": "pay-unique-001",
+        "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+        "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+        "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
+        "amount": 5000,
+        "currency": "USD",
+        "captureMethod": "automatic"
+      }'
+    ```
+
+    A successful response returns the payment record with `status: "captured"`.
+
+    ```json
+    {
+      "paymentId": "pay_01hxya8s1tk9k7b7c7t4edr5gj",
+      "idempotencyKey": "pay-unique-001",
+      "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+      "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+      "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+      "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
+      "captureMethod": "automatic",
+      "processor": "finix",
+      "amount": 5000,
+      "currency": "USD",
+      "status": "captured",
+      "createdAt": "2024-06-01T12:03:00Z",
+      "authorizedAt": "2024-06-01T12:03:01Z",
+      "capturedAt": "2024-06-01T12:03:02Z"
+    }
+    ```
+  </Step>
+</Steps>
+
+## Payment statuses
+
+After creation, a payment moves through a lifecycle of statuses. Use these to track the state of every charge.
+
+| Status | Description |
+|---|---|
+| `pending` | The payment has been received and is awaiting processing by the payment processor. |
+| `authorized` | The funds have been reserved on the customer's payment method but not yet captured. |
+| `captured` | The authorized funds have been captured and the charge is confirmed. |
+| `completed` | The payment has fully settled and funds have been transferred. |
+| `voided` | The authorization was cancelled before capture. No funds were collected. |
+| `refunded` | The captured payment was reversed and funds returned to the customer. |
+| `declined` | The payment was rejected by the processor or the issuing bank. |
+
+<Tip>
+  Always use a unique `idempotencyKey` per payment to safely retry failed requests without double-charging. If a network error occurs, resubmit the same request with the same key — PayGood returns the original result instead of creating a duplicate.
+</Tip>

@@ -1,0 +1,142 @@
+---
+title: "Vault Token Display Endpoints for Cards and Bank Accounts"
+sidebarTitle: "Tokenization"
+description: "Retrieve masked, non-sensitive display details for Basis Theory vault tokens covering cards, bank accounts, and tax identifiers in PayGood."
+---
+
+PayGood provides display endpoints that return masked, non-sensitive details for vault tokens. Use these to show customers their saved payment methods in your UI — for example, displaying "Visa ending in 4242" or "Chase account ending in 6789" — without ever exposing raw card or account numbers. All three endpoints are read-only and require a valid vault token ID.
+
+## Card display
+
+Retrieve masked display information for a card vault token.
+
+```
+GET https://api.paygood.com/tokenization/cards/{tokenId}/display
+```
+
+<ParamField path="tokenId" type="string" required>
+  The vault token ID for the card, as issued by Basis Theory.
+</ParamField>
+
+```bash
+curl https://api.paygood.com/tokenization/cards/tok_basistheory_abc123/display \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+### Response fields
+
+<ResponseField name="brand" type="string">
+  The card network brand, e.g. `Visa`, `Mastercard`, `Amex`.
+</ResponseField>
+
+<ResponseField name="last4" type="string">
+  The last four digits of the card number.
+</ResponseField>
+
+<ResponseField name="expiryMonth" type="integer">
+  The card's expiry month (1–12).
+</ResponseField>
+
+<ResponseField name="expiryYear" type="integer">
+  The card's four-digit expiry year, e.g. `2028`.
+</ResponseField>
+
+### Response example
+
+```json
+{
+  "brand": "Visa",
+  "last4": "4242",
+  "expiryMonth": 12,
+  "expiryYear": 2028
+}
+```
+
+---
+
+## Bank account display
+
+Retrieve masked display information for a bank account vault token.
+
+```
+GET https://api.paygood.com/tokenization/bank-accounts/{tokenId}/display
+```
+
+<ParamField path="tokenId" type="string" required>
+  The vault token ID for the bank account, as issued by Basis Theory.
+</ParamField>
+
+```bash
+curl https://api.paygood.com/tokenization/bank-accounts/tok_basistheory_def456/display \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+### Response fields
+
+<ResponseField name="last4" type="string">
+  The last four digits of the bank account number.
+</ResponseField>
+
+<ResponseField name="scheme" type="string">
+  The payment scheme for this account. One of:
+  - `us_domestic` — ACH transfers within the United States
+  - `ca_eft` — EFT transfers within Canada
+  - `gb_domestic` — BACS transfers within the United Kingdom
+  - `iban` — International Bank Account Number transfers
+</ResponseField>
+
+<ResponseField name="bankName" type="string">
+  The name of the bank associated with the account, e.g. `Chase`, `TD Bank`, `Barclays`. This field is optional and may be absent.
+</ResponseField>
+
+### Response example
+
+```json
+{
+  "last4": "6789",
+  "scheme": "us_domestic",
+  "bankName": "Chase"
+}
+```
+
+---
+
+## Tax identifier display
+
+Retrieve masked display information for a tax identifier vault token.
+
+```
+GET https://api.paygood.com/tokenization/tax-identifiers/{tokenId}/display
+```
+
+<ParamField path="tokenId" type="string" required>
+  The vault token ID for the tax identifier, as issued by Basis Theory.
+</ParamField>
+
+```bash
+curl https://api.paygood.com/tokenization/tax-identifiers/tok_basistheory_ghi789/display \
+  -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+```
+
+### Response fields
+
+<ResponseField name="last4" type="string">
+  The last four digits of the tax identifier number.
+</ResponseField>
+
+<ResponseField name="kind" type="string">
+  The type of tax identifier, e.g. `ein` (Employer Identification Number). This field is optional and may be absent.
+</ResponseField>
+
+### Response example
+
+```json
+{
+  "last4": "1234",
+  "kind": "ein"
+}
+```
+
+<Note>
+  These endpoints return only masked data — the last 4 digits of the sensitive value, never the full number. Raw card numbers, account numbers, and tax identifiers are never returned by the PayGood API at any point.
+</Note>

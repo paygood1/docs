@@ -1,0 +1,40 @@
+---
+title: "PayGood Payments API: Developer Overview and Guide"
+sidebarTitle: "Introduction"
+description: "PayGood is a REST API for accepting payments, managing customers, and onboarding merchants. Discover what you can build and how to get started."
+---
+
+PayGood is a REST API that gives you everything you need to accept payments, manage customers, and onboard merchants into your platform. Whether you're building a marketplace, a SaaS billing system, or a point-of-sale integration, PayGood provides the primitives to move money reliably and at scale.
+
+## What you can build
+
+<CardGroup cols={2}>
+  <Card title="Payments" icon="credit-card" href="/guides/first-payment">
+    Create, capture, and refund payments. Support one-time charges and authorize-and-capture flows for your customers.
+  </Card>
+  <Card title="Customers" icon="users" href="/api-reference/customers/create-customer">
+    Store and manage customer profiles. Attach payment instruments and retrieve transaction history for any customer.
+  </Card>
+  <Card title="Payment Instruments" icon="wallet" href="/api-reference/payment-instruments/overview">
+    Tokenize cards and bank accounts. Securely store payment methods and reuse them for future charges without re-entering details.
+  </Card>
+  <Card title="Catalog" icon="tag" href="/api-reference/catalog/create-product">
+    Define products and pricing in PayGood's catalog. Reference catalog items when creating payments to keep your billing logic consistent.
+  </Card>
+  <Card title="Merchant Onboarding" icon="store" href="/guides/merchant-onboarding-overview">
+    Onboard sub-merchants to your platform. Collect KYC information, configure payout schedules, and manage merchant accounts programmatically.
+  </Card>
+</CardGroup>
+
+## Supported currencies
+
+PayGood currently supports the following currencies for payment processing:
+
+- **USD** — United States Dollar
+- **CAD** — Canadian Dollar
+
+Specify the currency using its three-letter ISO 4217 code when creating a payment. Additional currencies are planned — check the changelog for updates.
+
+## Idempotent requests
+
+All write operations (such as creating a payment or a customer) accept an `idempotencyKey` field in the request body. Supplying a unique key lets you safely retry a request if you experience a network timeout or other transient error — PayGood will return the result of the original operation rather than creating a duplicate. Use a UUID or another sufficiently unique string as your idempotency key.
