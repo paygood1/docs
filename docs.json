@@ -43,52 +43,8 @@
         "tab": "API Reference",
         "groups": [
           {
-            "group": "Overview",
-            "pages": [
-              "api-reference/overview",
-              "api-reference/authentication",
-              "api-reference/pagination",
-              "api-reference/errors"
-            ]
-          },
-          {
-            "group": "Payments",
-            "pages": [
-              "api-reference/payments/create-payment",
-              "api-reference/payments/list-payments"
-            ]
-          },
-          {
-            "group": "Customers",
-            "pages": [
-              "api-reference/customers/create-customer",
-              "api-reference/customers/get-customer",
-              "api-reference/customers/list-merchant-customers"
-            ]
-          },
-          {
-            "group": "Payment Instruments",
-            "pages": [
-              "api-reference/payment-instruments/overview",
-              "api-reference/payment-instruments/register-instrument",
-              "api-reference/payment-instruments/tokenization"
-            ]
-          },
-          {
-            "group": "Catalog",
-            "pages": [
-              "api-reference/catalog/create-product",
-              "api-reference/catalog/create-price",
-              "api-reference/catalog/archive-price"
-            ]
-          },
-          {
-            "group": "Merchant Applications",
-            "pages": [
-              "api-reference/merchant-applications/create",
-              "api-reference/merchant-applications/update",
-              "api-reference/merchant-applications/submit"
-            ]
+            "group": "Endpoints",
+            "openapi": "openapi.json"
           }
         ]
       }
