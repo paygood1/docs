@@ -545,6 +545,122 @@
       "post": {
         "operationId": "CustomersController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create a platform customer. Request shape depends on `entityType`.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "entityType": {
+                        "type": "string",
+                        "enum": [
+                          "individual"
+                        ]
+                      },
+                      "firstName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Individual legal first name."
+                      },
+                      "lastName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Individual legal last name."
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Optional customer phone number."
+                      },
+                      "idempotencyKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Idempotency key for safe create retries."
+                      }
+                    },
+                    "required": [
+                      "entityType",
+                      "firstName",
+                      "lastName",
+                      "email",
+                      "idempotencyKey"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "entityType": {
+                        "type": "string",
+                        "enum": [
+                          "organization"
+                        ]
+                      },
+                      "organizationName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Registered business or organization name."
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Optional customer phone number."
+                      },
+                      "idempotencyKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Idempotency key for safe create retries."
+                      }
+                    },
+                    "required": [
+                      "entityType",
+                      "organizationName",
+                      "email",
+                      "idempotencyKey"
+                    ]
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "entityType"
+                }
+              },
+              "examples": {
+                "individual": {
+                  "summary": "Individual customer",
+                  "value": {
+                    "entityType": "individual",
+                    "firstName": "Amina",
+                    "lastName": "Diallo",
+                    "email": "amina.diallo@example.com",
+                    "phone": "+12025550123",
+                    "idempotencyKey": "idem_customers_individual_001"
+                  }
+                },
+                "organization": {
+                  "summary": "Organization customer",
+                  "value": {
+                    "entityType": "organization",
+                    "organizationName": "Diallo Imports LLC",
+                    "email": "finance@dialloimports.example.com",
+                    "phone": "+12025550124",
+                    "idempotencyKey": "idem_customers_organization_001"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -620,10 +736,116 @@
         ],
         "requestBody": {
           "required": true,
+          "description": "Create a customer under the merchant scope. Request shape depends on `entityType`.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateMerchantCustomerDto"
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "entityType": {
+                        "type": "string",
+                        "enum": [
+                          "individual"
+                        ]
+                      },
+                      "firstName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Individual legal first name."
+                      },
+                      "lastName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Individual legal last name."
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Optional customer phone number."
+                      },
+                      "idempotencyKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Idempotency key for safe create retries."
+                      }
+                    },
+                    "required": [
+                      "entityType",
+                      "firstName",
+                      "lastName",
+                      "email",
+                      "idempotencyKey"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "entityType": {
+                        "type": "string",
+                        "enum": [
+                          "organization"
+                        ]
+                      },
+                      "organizationName": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Registered business or organization name."
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "phone": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Optional customer phone number."
+                      },
+                      "idempotencyKey": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Idempotency key for safe create retries."
+                      }
+                    },
+                    "required": [
+                      "entityType",
+                      "organizationName",
+                      "email",
+                      "idempotencyKey"
+                    ]
+                  }
+                ],
+                "discriminator": {
+                  "propertyName": "entityType"
+                }
+              },
+              "examples": {
+                "individual": {
+                  "summary": "Individual customer linked to merchant",
+                  "value": {
+                    "entityType": "individual",
+                    "firstName": "Ahmadou",
+                    "lastName": "Diallo",
+                    "email": "ahmadou.diallo@example.com",
+                    "phone": "+12025550125",
+                    "idempotencyKey": "idem_merchant_customer_individual_001"
+                  }
+                },
+                "organization": {
+                  "summary": "Organization customer linked to merchant",
+                  "value": {
+                    "entityType": "organization",
+                    "organizationName": "Sahel Trade Co",
+                    "email": "ops@saheltrade.example.com",
+                    "phone": "+12025550126",
+                    "idempotencyKey": "idem_merchant_customer_organization_001"
+                  }
+                }
               }
             }
           }
@@ -3861,48 +4083,6 @@
           "email",
           "entityType",
           "createdAt"
-        ]
-      },
-      "CreateMerchantCustomerDto": {
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-          },
-          "phone": {
-            "type": "string",
-            "minLength": 1
-          },
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
-          "entityType": {
-            "type": "string",
-            "enum": [
-              "individual",
-              "organization"
-            ]
-          },
-          "firstName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "lastName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "organizationName": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "email",
-          "idempotencyKey",
-          "entityType"
         ]
       },
       "MerchantScopedCustomerResponseDto": {
