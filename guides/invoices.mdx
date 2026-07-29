@@ -1,0 +1,109 @@
+---
+title: "Send and Manage Invoices with PayGood"
+sidebarTitle: "Invoices"
+description: "Create a draft invoice, revise it, mark it as paid, void it, and view its revision history using the PayGood Invoices API."
+---
+
+This guide walks you through the full invoice lifecycle: create a draft, revise it, mark it as paid, void it, and inspect its revision history.
+
+<Note>
+  You need an API key and a merchant and customer already set up. See [Set Up Your API Keys](/guides/api-keys) and [Manage Customers](/guides/manage-customers).
+</Note>
+
+<Steps>
+  <Step title="Create a draft invoice">
+    Send `POST /invoices` with the merchant and customer references and a list of line items. Line items can be `product_charge` items pulled from your catalog, `manual_adjustment` items for things like tax or shipping, or a mix of both.
+
+    ```bash
+    curl -X POST https://api.paygood.co/invoices \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "idempotencyKey": "idem-inv-01",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+        "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+        "currency": "usd",
+        "lineItems": [
+          {
+            "kind": "product_charge",
+            "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+            "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2f1",
+            "description": "Monthly subscription",
+            "quantity": 2,
+            "unitAmount": 2500
+          },
+          {
+            "kind": "manual_adjustment",
+            "description": "Sales tax",
+            "amount": 1300
+          }
+        ]
+      }'
+    ```
+
+    Save the returned invoice `id` (`inv_...`) for use in later steps.
+  </Step>
+  <Step title="Revise the draft">
+    Draft invoices can be updated with `PUT /invoices/{id}`. Each successful update appends an entry to the invoice's revision history. Send the full line item snapshot you want on the invoice, not just the changes.
+
+    ```bash
+    curl -X PUT https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "idempotencyKey": "idem-inv-01-rev-1",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+        "lineItems": [
+          {
+            "kind": "product_charge",
+            "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+            "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2f1",
+            "description": "Monthly subscription",
+            "quantity": 3,
+            "unitAmount": 2500
+          }
+        ]
+      }'
+    ```
+  </Step>
+  <Step title="Mark the invoice as paid">
+    Once the customer has paid outside of PayGood (for example, by ACH or check), transition the invoice to paid with `POST /invoices/{id}/mark-paid`.
+
+    ```bash
+    curl -X POST https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va/mark-paid \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "idempotencyKey": "idem-inv-01-paid",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+      }'
+    ```
+  </Step>
+  <Step title="Void an invoice">
+    To cancel a draft or issued invoice, call `POST /invoices/{id}/void`. Void is a terminal state.
+
+    ```bash
+    curl -X POST https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va/void \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+      -H 'Content-Type: application/json' \
+      -d '{
+        "idempotencyKey": "idem-inv-01-void",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+      }'
+    ```
+  </Step>
+  <Step title="View revision history">
+    Every update creates a new revision. Retrieve the append-only history (newest first) with `GET /invoices/{id}/revisions`.
+
+    ```bash
+    curl -X GET 'https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va/revisions?merchantId=mer_01hxy8m1nqk9g3x3y3p0azq2bg' \
+      -H 'Authorization: Bearer $PAYGOOD_API_KEY'
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Always pass a unique `idempotencyKey` on every write. Retrying the same key returns the original result instead of creating a duplicate invoice, revision, or state transition.
+</Tip>
+
+For the full request and response schemas, see the [Invoices API reference](/api-reference).

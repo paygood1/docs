@@ -26,7 +26,8 @@
             "pages": [
               "guides/first-payment",
               "guides/manage-customers",
-              "guides/payment-instruments"
+              "guides/payment-instruments",
+              "guides/invoices"
             ]
           },
           {
