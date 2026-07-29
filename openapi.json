@@ -872,8 +872,20 @@
     },
     "/catalog/products": {
       "post": {
+        "description": "Creates a merchant-scoped catalog product. Requires idempotency key and merchant scope.",
         "operationId": "CatalogProductsController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key and merchant-scoped product details.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -895,16 +907,104 @@
         "tags": [
           "catalog-products"
         ]
+      },
+      "get": {
+        "description": "Returns catalog products sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively. Requires `catalog.manage` capability for the scoped merchant.",
+        "operationId": "CatalogProductsController_list",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for product `createdAt`.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for product `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicHJvZF8wMS4uLiJ9fQ==",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated catalog products for the merchant scope.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListProductsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters (bad cursor format, invalid TypeID, or invalid date bounds)."
+          },
+          "401": {
+            "description": "Missing or invalid bearer token."
+          },
+          "403": {
+            "description": "Caller is authenticated but lacks `catalog.manage` capability for this merchant."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List catalog products for a merchant",
+        "tags": [
+          "catalog-products"
+        ]
       }
     },
     "/catalog/products/{productId}": {
       "get": {
+        "description": "Returns a single catalog product for the provided merchant scope and product id.",
         "operationId": "CatalogProductsController_get",
         "parameters": [
           {
             "name": "productId",
             "required": true,
             "in": "path",
+            "description": "Product TypeID (`prod_...`) to fetch.",
             "schema": {
               "type": "string"
             }
@@ -913,7 +1013,9 @@
             "name": "merchantId",
             "required": true,
             "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
             "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
               "type": "string"
             }
           }
@@ -939,12 +1041,225 @@
         "tags": [
           "catalog-products"
         ]
+      },
+      "put": {
+        "description": "Updates a merchant-scoped catalog product name and description. Requires idempotency key and `catalog.manage` capability.",
+        "operationId": "CatalogProductsController_update",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product TypeID (`prod_...`) to update.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Update payload with idempotency key, merchant scope, product name, and optional description.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated product in canonical response shape.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload (TypeID, name, or idempotency key shape)."
+          },
+          "401": {
+            "description": "Missing or invalid bearer token."
+          },
+          "403": {
+            "description": "Caller is authenticated but lacks `catalog.manage` capability for this merchant."
+          },
+          "404": {
+            "description": "No product exists for the provided merchant and product id."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a catalog product",
+        "tags": [
+          "catalog-products"
+        ]
+      }
+    },
+    "/catalog/products/{productId}/price": {
+      "put": {
+        "description": "Atomically replaces a product price by creating a new active price and archiving any existing active prices for the same product/merchant scope. This endpoint is idempotent by `idempotencyKey` per merchant.",
+        "operationId": "CatalogProductsController_updatePrice",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product TypeID (`prod_...`) whose active price set should be replaced.",
+            "schema": {
+              "example": "prod_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Replacement price payload with merchant scope, idempotency key, and money/type fields.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductPriceDto"
+              },
+              "examples": {
+                "oneTimePrice": {
+                  "summary": "Replace with one-time USD 25.00 price",
+                  "value": {
+                    "idempotencyKey": "idempo_catalog_product_price_01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "amount": 2500,
+                    "currency": "USD",
+                    "type": "one_time"
+                  }
+                },
+                "recurringPrice": {
+                  "summary": "Replace with recurring monthly USD 12.00 price",
+                  "value": {
+                    "idempotencyKey": "idempo_catalog_product_price_02",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "amount": 1200,
+                    "currency": "USD",
+                    "type": "recurring",
+                    "interval": "month"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Replacement active price in canonical response shape. Previously active prices for this product are archived.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponseDto"
+                },
+                "example": {
+                  "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2bg",
+                  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                  "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2bg",
+                  "amount": 2500,
+                  "currency": "USD",
+                  "type": "one_time",
+                  "createdAt": "2026-07-28T20:37:00.000Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid payload shape, unsupported interval/type combination, currency/amount validation failure, or inactive product."
+          },
+          "401": {
+            "description": "Missing or invalid bearer token."
+          },
+          "403": {
+            "description": "Caller is authenticated but lacks `catalog.manage` capability for this merchant."
+          },
+          "404": {
+            "description": "No product exists for the provided merchant and product id."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a catalog product price",
+        "tags": [
+          "catalog-products"
+        ]
+      }
+    },
+    "/catalog/products/{productId}/status": {
+      "put": {
+        "operationId": "CatalogProductsController_updateStatus",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product TypeID (`prod_...`) to update.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Status update payload with idempotency key, merchant scope, and target status.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Update a catalog product status",
+        "tags": [
+          "catalog-products"
+        ]
       }
     },
     "/catalog/prices": {
       "post": {
+        "description": "Creates a merchant-scoped price that is either one-time or recurring.",
         "operationId": "CatalogPricesController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key, merchant scope, money fields, and optional product link.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceDto"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -966,17 +1281,105 @@
         "tags": [
           "catalog-prices"
         ]
+      },
+      "get": {
+        "description": "Returns catalog prices sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively.",
+        "operationId": "CatalogPricesController_list",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for price `createdAt`.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for price `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicHJpY2VfMDEuLi4ifX0=",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPricesResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List catalog prices for a merchant",
+        "tags": [
+          "catalog-prices"
+        ]
       }
     },
-    "/catalog/prices/{priceId}/archive": {
-      "put": {
-        "operationId": "CatalogPricesController_archive",
+    "/catalog/prices/{priceId}": {
+      "get": {
+        "operationId": "CatalogPricesController_get",
         "parameters": [
           {
             "name": "priceId",
             "required": true,
             "in": "path",
+            "description": "Price TypeID (`price_...`) to fetch.",
             "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
               "type": "string"
             }
           }
@@ -998,9 +1401,603 @@
             "bearer": []
           }
         ],
+        "summary": "Get a catalog price by id",
+        "tags": [
+          "catalog-prices"
+        ]
+      }
+    },
+    "/catalog/prices/{priceId}/archive": {
+      "put": {
+        "description": "Marks a merchant-scoped catalog price as archived. Archived prices are not chargeable.",
+        "operationId": "CatalogPricesController_archive",
+        "parameters": [
+          {
+            "name": "priceId",
+            "required": true,
+            "in": "path",
+            "description": "Price TypeID (`price_...`) to archive.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Archive payload with idempotency key and merchant scope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchivePriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
         "summary": "Archive an existing catalog price",
         "tags": [
           "catalog-prices"
+        ]
+      }
+    },
+    "/invoices": {
+      "post": {
+        "description": "Creates a merchant-scoped draft invoice with a sequential merchant invoice number. Line items may mix catalog product charges and manual adjustments such as merchant-calculated tax or shipping.",
+        "operationId": "InvoicesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key, merchant/customer references, and mixed line items.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInvoiceDto"
+              },
+              "examples": {
+                "productLines": {
+                  "summary": "Product line items only",
+                  "value": {
+                    "idempotencyKey": "idem-inv-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+                    "currency": "usd",
+                    "lineItems": [
+                      {
+                        "kind": "product_charge",
+                        "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+                        "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2f1",
+                        "description": "Monthly subscription",
+                        "quantity": 2,
+                        "unitAmount": 2500
+                      }
+                    ]
+                  }
+                },
+                "manualAdjustmentLines": {
+                  "summary": "Manual adjustment lines (tax/shipping)",
+                  "value": {
+                    "idempotencyKey": "idem-inv-02",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+                    "currency": "usd",
+                    "lineItems": [
+                      {
+                        "kind": "manual_adjustment",
+                        "description": "Sales tax",
+                        "amount": 1300
+                      },
+                      {
+                        "kind": "manual_adjustment",
+                        "description": "Promotional discount",
+                        "amount": -500
+                      }
+                    ]
+                  }
+                },
+                "mixedLines": {
+                  "summary": "Mixed product and manual line items",
+                  "value": {
+                    "idempotencyKey": "idem-inv-03",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+                    "currency": "usd",
+                    "lineItems": [
+                      {
+                        "kind": "product_charge",
+                        "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+                        "description": "Consulting package",
+                        "quantity": 1,
+                        "unitAmount": 10000
+                      },
+                      {
+                        "kind": "manual_adjustment",
+                        "description": "Tax",
+                        "amount": 800
+                      }
+                    ],
+                    "dueDate": "2026-08-15T00:00:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Draft invoice created successfully with assigned invoice number and computed totals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (invalid TypeIDs, empty line items, non-integer amounts, currency mismatch, or non-positive total)."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.create` capability or merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a draft invoice",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "get": {
+        "description": "Returns invoices sorted by newest first using cursor pagination. Supports optional customer and created-at range filtering.",
+        "operationId": "InvoicesController_list",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for invoice `createdAt`. Must be >= `start` when both are provided.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for invoice `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoiaW52XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "description": "Optional customer TypeID (`cust_...`) filter.",
+            "schema": {
+              "example": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope invoice listing.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of invoices. Each item contains invoice number, status, and computed totals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListInvoicesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters or malformed cursor token."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List invoices for a merchant",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}": {
+      "put": {
+        "description": "Updates draft invoice contents while keeping the same invoice id and URL slug. Each successful update appends an invoice revision entry.",
+        "operationId": "InvoicesController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to revise.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Revision payload with idempotency key, merchant scope, and full replacement line-item snapshot.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInvoiceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice revised successfully; response includes incremented `currentRevisionNumber` and unchanged `invoiceUrlSlug`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, invoice is not in draft state, or revision total is invalid."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revise a draft invoice",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "get": {
+        "description": "Returns a single merchant-scoped invoice by its TypeID, including invoice number, line items, and computed totals.",
+        "operationId": "InvoicesController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to fetch.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Invoice found.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed for invoice id or merchant id."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get invoice by id",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}/mark-paid": {
+      "post": {
+        "description": "Manually transitions an issued invoice to paid for the provided merchant scope. This endpoint is idempotent by idempotency key per invoice.",
+        "operationId": "InvoicesController_markPaid",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to mark as paid.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Mark-paid payload with idempotency key, merchant scope, and optional paid timestamp override.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkInvoicePaidDto"
+              },
+              "examples": {
+                "paidNow": {
+                  "summary": "Mark as paid using current timestamp",
+                  "value": {
+                    "idempotencyKey": "idem-inv-mark-paid-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+                  }
+                },
+                "paidWithTimestamp": {
+                  "summary": "Mark as paid with explicit timestamp",
+                  "value": {
+                    "idempotencyKey": "idem-inv-mark-paid-02",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "paidAt": "2026-08-20T14:30:00.000Z"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice marked as paid successfully. Response includes `status: paid` and populated `paidAt`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or invoice is not currently in issued state."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mark an issued invoice as paid",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}/void": {
+      "post": {
+        "description": "Manually transitions a draft or issued invoice to void for the provided merchant scope. This endpoint is idempotent by idempotency key per invoice.",
+        "operationId": "InvoicesController_void",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to void.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Void payload with idempotency key and merchant scope.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoidInvoiceDto"
+              },
+              "examples": {
+                "voidInvoice": {
+                  "summary": "Void invoice request",
+                  "value": {
+                    "idempotencyKey": "idem-inv-void-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice voided successfully with `status: void`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or invoice cannot be voided from its current status."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Void a draft or issued invoice",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}/revisions": {
+      "get": {
+        "description": "Returns append-only revision history for an invoice, newest revision first.",
+        "operationId": "InvoicesController_listRevisions",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) whose revision history is returned.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revision history for the requested invoice.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InvoiceRevisionResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed for invoice id or merchant id."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List invoice revisions",
+        "tags": [
+          "invoices"
         ]
       }
     },
@@ -2823,6 +3820,19 @@
             "type": "string",
             "minLength": 1
           },
+          "displayName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "organizationName": {
+            "type": "string"
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -2832,7 +3842,7 @@
             "type": "string",
             "enum": [
               "individual",
-              "business"
+              "organization"
             ]
           },
           "phone": {
@@ -2847,6 +3857,7 @@
         "required": [
           "customerId",
           "name",
+          "displayName",
           "email",
           "entityType",
           "createdAt"
@@ -2855,21 +3866,10 @@
       "CreateMerchantCustomerDto": {
         "type": "object",
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1
-          },
           "email": {
             "type": "string",
             "format": "email",
             "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
-          },
-          "entityType": {
-            "type": "string",
-            "enum": [
-              "individual",
-              "business"
-            ]
           },
           "phone": {
             "type": "string",
@@ -2878,13 +3878,31 @@
           "idempotencyKey": {
             "type": "string",
             "minLength": 1
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "organization"
+            ]
+          },
+          "firstName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "lastName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "organizationName": {
+            "type": "string",
+            "minLength": 1
           }
         },
         "required": [
-          "name",
           "email",
-          "entityType",
-          "idempotencyKey"
+          "idempotencyKey",
+          "entityType"
         ]
       },
       "MerchantScopedCustomerResponseDto": {
@@ -2897,6 +3915,19 @@
             "type": "string",
             "minLength": 1
           },
+          "displayName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "organizationName": {
+            "type": "string"
+          },
           "email": {
             "type": "string",
             "format": "email",
@@ -2906,7 +3937,7 @@
             "type": "string",
             "enum": [
               "individual",
-              "business"
+              "organization"
             ]
           },
           "phone": {
@@ -2921,6 +3952,7 @@
         "required": [
           "customerId",
           "name",
+          "displayName",
           "email",
           "entityType",
           "createdAt"
@@ -2950,7 +3982,7 @@
                   "type": "string",
                   "enum": [
                     "individual",
-                    "business"
+                    "organization"
                   ]
                 },
                 "createdAt": {
@@ -3184,6 +4216,30 @@
           "createdAt"
         ]
       },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "name"
+        ]
+      },
       "ProductResponseDto": {
         "type": "object",
         "properties": {
@@ -3200,6 +4256,13 @@
           "description": {
             "type": "string"
           },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          },
           "active": {
             "type": "boolean"
           },
@@ -3213,8 +4276,147 @@
           "productId",
           "merchantId",
           "name",
+          "status",
           "active",
           "createdAt"
+        ]
+      },
+      "ListProductsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "productId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "inactive"
+                  ]
+                },
+                "active": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "productId",
+                "merchantId",
+                "name",
+                "status",
+                "active",
+                "createdAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "name"
+        ]
+      },
+      "UpdateProductPriceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Client-generated key used to deduplicate retries for this price update operation."
+          },
+          "merchantId": {
+            "type": "string",
+            "description": "Merchant TypeID (`mer_...`) that owns the product and replacement price."
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "description": "Price amount in minor units (for example cents).",
+            "minimum": 0
+          },
+          "currency": {
+            "description": "ISO 4217 uppercase currency code for the replacement price.",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "type": {
+            "default": "one_time",
+            "description": "Price type. Use `one_time` for single-charge pricing or `recurring` for subscription-like pricing.",
+            "type": "string",
+            "enum": [
+              "one_time",
+              "recurring"
+            ]
+          },
+          "interval": {
+            "description": "Recurring interval label (for example `month`) required when `type=recurring`; omit for `one_time`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "amount",
+          "currency"
         ]
       },
       "PriceResponseDto": {
@@ -3268,6 +4470,1098 @@
           "amount",
           "currency",
           "type",
+          "createdAt"
+        ]
+      },
+      "UpdateProductStatusDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "inactive"
+            ]
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "status"
+        ]
+      },
+      "CreatePriceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "type": {
+            "default": "one_time",
+            "type": "string",
+            "enum": [
+              "one_time",
+              "recurring"
+            ]
+          },
+          "interval": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "amount",
+          "currency"
+        ]
+      },
+      "ListPricesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "priceId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "productId": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "one_time",
+                    "recurring"
+                  ]
+                },
+                "interval": {
+                  "type": "string"
+                },
+                "archivedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "priceId",
+                "merchantId",
+                "amount",
+                "currency",
+                "type",
+                "createdAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "ArchivePriceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId"
+        ]
+      },
+      "CreateInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "lineItems": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "product_charge"
+                      ]
+                    },
+                    "productId": {
+                      "type": "string"
+                    },
+                    "priceId": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "unitAmount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "productId",
+                    "description",
+                    "quantity",
+                    "unitAmount"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "manual_adjustment"
+                      ]
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "description",
+                    "amount"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "customerId",
+          "currency",
+          "lineItems"
+        ]
+      },
+      "InvoiceResponseDto": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string"
+          },
+          "invoiceNumber": {
+            "type": "string",
+            "minLength": 1
+          },
+          "invoiceUrlSlug": {
+            "type": "string",
+            "minLength": 1
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "currentRevisionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "issued",
+              "paid",
+              "void"
+            ]
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "lineItems": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "product_charge"
+                      ]
+                    },
+                    "productId": {
+                      "type": "string"
+                    },
+                    "priceId": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "unitAmount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "lineTotal": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "productId",
+                    "description",
+                    "quantity",
+                    "unitAmount",
+                    "lineTotal"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "manual_adjustment"
+                      ]
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "lineTotal": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "description",
+                    "amount",
+                    "lineTotal"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "subtotal": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ]
+          },
+          "total": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "invoiceId",
+          "invoiceNumber",
+          "invoiceUrlSlug",
+          "idempotencyKey",
+          "merchantId",
+          "customerId",
+          "currentRevisionNumber",
+          "status",
+          "currency",
+          "lineItems",
+          "subtotal",
+          "total",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "lineItems": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "product_charge"
+                      ]
+                    },
+                    "productId": {
+                      "type": "string"
+                    },
+                    "priceId": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "unitAmount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "productId",
+                    "description",
+                    "quantity",
+                    "unitAmount"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "manual_adjustment"
+                      ]
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "description",
+                    "amount"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "notes": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "changeReason": {
+            "type": "string",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "currency",
+          "lineItems"
+        ]
+      },
+      "MarkInvoicePaidDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "paidAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId"
+        ]
+      },
+      "VoidInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "merchantId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId"
+        ]
+      },
+      "ListInvoicesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invoiceId": {
+                  "type": "string"
+                },
+                "invoiceNumber": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "invoiceUrlSlug": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "idempotencyKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "customerId": {
+                  "type": "string"
+                },
+                "currentRevisionNumber": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "issued",
+                    "paid",
+                    "void"
+                  ]
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "lineItems": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "product_charge"
+                            ]
+                          },
+                          "productId": {
+                            "type": "string"
+                          },
+                          "priceId": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 500
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0
+                          },
+                          "unitAmount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "lineTotal": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "productId",
+                          "description",
+                          "quantity",
+                          "unitAmount",
+                          "lineTotal"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "manual_adjustment"
+                            ]
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 500
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "lineTotal": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "description",
+                          "amount",
+                          "lineTotal"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "subtotal": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "total": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "dueDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "paidAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "invoiceId",
+                "invoiceNumber",
+                "invoiceUrlSlug",
+                "idempotencyKey",
+                "merchantId",
+                "customerId",
+                "currentRevisionNumber",
+                "status",
+                "currency",
+                "lineItems",
+                "subtotal",
+                "total",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "InvoiceRevisionResponseDto": {
+        "type": "object",
+        "properties": {
+          "invoiceId": {
+            "type": "string"
+          },
+          "revisionNumber": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "lineItems": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "product_charge"
+                      ]
+                    },
+                    "productId": {
+                      "type": "string"
+                    },
+                    "priceId": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "unitAmount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "lineTotal": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "productId",
+                    "description",
+                    "quantity",
+                    "unitAmount",
+                    "lineTotal"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "manual_adjustment"
+                      ]
+                    },
+                    "description": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    "lineTotal": {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "description",
+                    "amount",
+                    "lineTotal"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "subtotal": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ]
+          },
+          "total": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "issued",
+              "paid",
+              "void"
+            ]
+          },
+          "dueDate": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "notes": {
+            "type": "string"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "changeReason": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "invoiceId",
+          "revisionNumber",
+          "idempotencyKey",
+          "currency",
+          "lineItems",
+          "subtotal",
+          "total",
+          "status",
           "createdAt"
         ]
       },
