@@ -12,27 +12,31 @@ This guide walks you through processing your first payment with PayGood. By the 
 
 <Steps>
   <Step title="Create a customer">
-    Every payment must be linked to a customer. Send a `POST /customers` request with the customer's name, email, and entity type.
+    Every payment must be linked to a customer. Send a `POST /merchants/{merchantId}/customers` request with the customer's `entityType` (`individual` or `organization`) and name fields.
 
     ```bash
-    curl -X POST https://api.paygood.com/customers \
+    curl -X POST https://api.paygood.co/merchants/mer_01hxy8m1nqk9g3x3y3p0azq2bg/customers \
       -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
       -H 'Content-Type: application/json' \
       -d '{
-        "name": "Jane Smith",
-        "email": "jane@example.com",
         "entityType": "individual",
+        "firstName": "Jane",
+        "lastName": "Smith",
+        "email": "jane@example.com",
         "phone": "+15551234567",
         "idempotencyKey": "cust-create-001"
       }'
     ```
 
-    Save the `customerId` from the response — you'll need it in the next steps.
+    Save the `customerId` from the response, you'll need it in the next steps.
 
     ```json
     {
       "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
       "name": "Jane Smith",
+      "displayName": "Jane Smith",
+      "firstName": "Jane",
+      "lastName": "Smith",
       "email": "jane@example.com",
       "entityType": "individual",
       "phone": "+15551234567",
@@ -40,12 +44,11 @@ This guide walks you through processing your first payment with PayGood. By the 
     }
     ```
   </Step>
-
   <Step title="Register a payment instrument">
     A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with your vault provider (Basis Theory) first, then pass the resulting token to PayGood.
 
     ```bash
-    curl -X POST https://api.paygood.com/payment-instruments \
+    curl -X POST https://api.paygood.co/payment-instruments \
       -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
       -H 'Content-Type: application/json' \
       -d '{
@@ -77,12 +80,11 @@ This guide walks you through processing your first payment with PayGood. By the 
     }
     ```
   </Step>
-
   <Step title="Create a price (recommended)">
     Define a reusable price in your catalog so you can reference it on payments without hard-coding amounts each time.
 
     ```bash
-    curl -X POST https://api.paygood.com/catalog/prices \
+    curl -X POST https://api.paygood.co/catalog/prices \
       -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
       -H 'Content-Type: application/json' \
       -d '{
@@ -108,12 +110,13 @@ This guide walks you through processing your first payment with PayGood. By the 
     }
     ```
   </Step>
-
   <Step title="Create a payment">
     You have everything you need. Submit the payment using the IDs you collected in the previous steps.
 
+    Set `captureMethod` to `automatic` to authorize and capture the funds in a single step, which charges the customer immediately.
+
     ```bash
-    curl -X POST https://api.paygood.com/payments \
+    curl -X POST https://api.paygood.co/payments \
       -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
       -H 'Content-Type: application/json' \
       -d '{
@@ -156,7 +159,7 @@ This guide walks you through processing your first payment with PayGood. By the 
 After creation, a payment moves through a lifecycle of statuses. Use these to track the state of every charge.
 
 | Status | Description |
-|---|---|
+| --- | --- |
 | `pending` | The payment has been received and is awaiting processing by the payment processor. |
 | `authorized` | The funds have been reserved on the customer's payment method but not yet captured. |
 | `captured` | The authorized funds have been captured and the charge is confirmed. |

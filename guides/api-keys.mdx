@@ -16,14 +16,14 @@ PayGood uses API keys — bearer tokens — to authenticate every request you ma
       The dashboard URL differs by environment: use [dashboard-sandbox.paygood.co](https://dashboard-sandbox.paygood.co) for sandbox and [dashboard.paygood.co](https://dashboard.paygood.co) for production.
     </Note>
   </Step>
-  <Step title="Navigate to Settings > API Keys">
-    In the left-hand navigation, click **Settings**, then select **API Keys** from the submenu.
+  <Step title="Navigate to Developers">
+    In the left-hand navigation, click **Developers**.
   </Step>
   <Step title="Create a new key and copy it immediately">
-    Click **Create API Key**, give it a descriptive name (for example, `Production – Backend Server`), and click **Generate**. Copy the key as soon as it appears — PayGood displays the full secret only once and cannot retrieve it afterward. If you lose the key, you must rotate it and generate a new one.
+    Click **Create  Key**, give it a descriptive name (for example, `Production – Backend Server`), and click **Generate**. Copy the key as soon as it appears — PayGood displays the full secret only once and cannot retrieve it afterward. If you lose the key, you must rotate it and generate a new one.
   </Step>
   <Step title="Store your key securely">
-    Save the key in a secure location such as an environment variable or a secrets manager (for example, AWS Secrets Manager, HashiCorp Vault, or your CI/CD platform's secret store). Never paste it directly into your source code.
+    Save the key in a secure location such as an environment variable or a secrets manager. Never paste it directly into your source code.
   </Step>
 </Steps>
 
@@ -34,7 +34,7 @@ PayGood provides two types of API keys to keep your development and production e
 - **Live keys** — Used in your production environment. Requests made with a live key move real money.
 - **Sandbox keys** — Used during development and testing. No real funds are transferred, so you can safely experiment without affecting live transactions.
 
-You can identify which type of key you are using by its label in the PayGood dashboard. Always use a sandbox key in your development and staging environments, and reserve your live key strictly for production traffic.
+You can identify which type of key you are using by the PayGood dashboard environment. Always use a sandbox key in your development and staging environments, and reserve your live key strictly for production traffic.
 
 ## Set your key as an environment variable
 
