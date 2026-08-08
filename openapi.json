@@ -337,10 +337,10 @@
         ]
       }
     },
-    "/payments/dashboard": {
+    "/dashboard/payments": {
       "get": {
         "description": "Returns dashboard payment cards sorted by newest first using cursor pagination. Accepts either operator bearer auth or member session auth.",
-        "operationId": "PaymentsController_listDashboard",
+        "operationId": "DashboardPaymentsController_list",
         "parameters": [
           {
             "name": "end",
@@ -412,11 +412,11 @@
         ],
         "summary": "List payments for merchant dashboard",
         "tags": [
-          "payments"
+          "dashboard"
         ]
       }
     },
-    "/customers/dashboard": {
+    "/dashboard/customers": {
       "get": {
         "operationId": "CustomerDashboardController_list",
         "parameters": [
@@ -480,39 +480,48 @@
         ],
         "summary": "List dashboard customers for a merchant",
         "tags": [
-          "customers"
+          "dashboard"
         ]
       }
     },
-    "/customers/dashboard/{id}": {
+    "/dashboard/customers/{merchantId}/{customerId}": {
       "get": {
         "operationId": "CustomerDashboardController_get",
         "parameters": [
           {
+            "name": "recentInvoicesLimit",
+            "required": false,
+            "in": "query",
+            "description": "Number of recent invoices to include in response. Defaults to 10. Maximum: 20.",
+            "schema": {
+              "example": 10,
+              "type": "number"
+            }
+          },
+          {
             "name": "recentPaymentsLimit",
             "required": false,
             "in": "query",
-            "description": "Number of recent transactions to include in response. Maximum: 20.",
+            "description": "Number of recent payments to include in response. Defaults to 10. Maximum: 20.",
             "schema": {
-              "example": 3,
+              "example": 10,
               "type": "number"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": true,
+            "in": "path",
+            "description": "Customer TypeID (`cust_...`) to fetch.",
+            "schema": {
+              "type": "string"
             }
           },
           {
             "name": "merchantId",
             "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope customer visibility.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
             "in": "path",
-            "description": "Customer TypeID (`cust_...`) to fetch.",
+            "description": "Merchant TypeID (`mer_...`) to scope customer visibility.",
             "schema": {
               "type": "string"
             }
@@ -524,7 +533,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CustomerDashboardDetailResponseDto"
+                  "$ref": "#/components/schemas/DashboardCustomerDetailResponseDto"
                 }
               }
             }
@@ -535,9 +544,9 @@
             "bearer": []
           }
         ],
-        "summary": "Get a single dashboard customer with recent transactions",
+        "summary": "Get merchant-scoped customer detail with recent activity",
         "tags": [
-          "customers"
+          "dashboard"
         ]
       }
     },
@@ -1060,6 +1069,34 @@
           }
         ],
         "summary": "Get masked tax identifier display details for a vault token",
+        "tags": [
+          "tokenization"
+        ]
+      }
+    },
+    "/tokenization/sessions": {
+      "post": {
+        "operationId": "BasisTheorySessionController_create",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BasisTheorySessionResponseDto"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Basis Theory rejected the session request"
+          },
+          "503": {
+            "description": "Basis Theory is unavailable"
+          }
+        },
+        "summary": "Create an authorized Basis Theory session for client-side tokenization",
         "tags": [
           "tokenization"
         ]
@@ -1911,6 +1948,25 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/UpdateInvoiceDto"
+              },
+              "examples": {
+                "reviseManualAdjustmentQuantity": {
+                  "summary": "Revise manual adjustment quantity",
+                  "value": {
+                    "idempotencyKey": "idem-inv-revise-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "currency": "usd",
+                    "lineItems": [
+                      {
+                        "kind": "manual_adjustment",
+                        "description": "Installation labor",
+                        "amount": 2500,
+                        "quantity": 3
+                      }
+                    ],
+                    "changeReason": "Labor hours increased"
+                  }
+                }
               }
             }
           }
@@ -1937,6 +1993,9 @@
           },
           "404": {
             "description": "Invoice was not found for the provided merchant scope."
+          },
+          "409": {
+            "description": "Invoice changed while this request was in flight. Re-read the invoice and retry against its current state."
           }
         },
         "security": [
@@ -2009,16 +2068,16 @@
         ]
       }
     },
-    "/invoices/{id}/mark-paid": {
+    "/invoices/{id}/payments": {
       "post": {
-        "description": "Manually transitions an issued invoice to paid for the provided merchant scope. This endpoint is idempotent by idempotency key per invoice.",
-        "operationId": "InvoicesController_markPaid",
+        "description": "Charges a payment instrument for all or part of the remaining balance. The returned allocation is `pending`: the invoice balance does not move until the processor reports a capture, so `amountPaid` and `status` in this response still reflect the pre-charge state. Idempotent by idempotency key per invoice — a replay returns the existing allocation without charging again.",
+        "operationId": "InvoicesController_charge",
         "parameters": [
           {
             "name": "id",
             "required": true,
             "in": "path",
-            "description": "Invoice TypeID (`inv_...`) to mark as paid.",
+            "description": "Invoice TypeID (`inv_...`) to charge.",
             "schema": {
               "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
@@ -2027,26 +2086,28 @@
         ],
         "requestBody": {
           "required": true,
-          "description": "Mark-paid payload with idempotency key, merchant scope, and optional paid timestamp override.",
+          "description": "Charge payload with idempotency key, merchant scope, payment instrument, and optional partial amount.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/MarkInvoicePaidDto"
+                "$ref": "#/components/schemas/ChargeInvoiceDto"
               },
               "examples": {
-                "paidNow": {
-                  "summary": "Mark as paid using current timestamp",
+                "chargeFullBalance": {
+                  "summary": "Charge the full remaining balance",
                   "value": {
-                    "idempotencyKey": "idem-inv-mark-paid-01",
-                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+                    "idempotencyKey": "idem-inv-charge-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1"
                   }
                 },
-                "paidWithTimestamp": {
-                  "summary": "Mark as paid with explicit timestamp",
+                "chargePartialAmount": {
+                  "summary": "Charge a partial amount",
                   "value": {
-                    "idempotencyKey": "idem-inv-mark-paid-02",
+                    "idempotencyKey": "idem-inv-charge-02",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-                    "paidAt": "2026-08-20T14:30:00.000Z"
+                    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1",
+                    "amount": 20000
                   }
                 }
               }
@@ -2054,24 +2115,103 @@
           }
         },
         "responses": {
-          "200": {
-            "description": "Invoice marked as paid successfully. Response includes `status: paid` and populated `paidAt`.",
+          "201": {
+            "description": "Charge accepted. Returns the invoice plus the newly created `pending` allocation.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                  "$ref": "#/components/schemas/InvoicePaymentResultDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Validation failed or invoice is not currently in issued state."
+            "description": "Validation failed, invoice is not `issued` or `partially_paid`, amount exceeds the remaining balance, or the payment instrument is inactive or belongs to another customer."
           },
           "401": {
             "description": "Missing or invalid authentication credentials."
           },
           "403": {
             "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope, or the payment instrument does not exist."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Charge a payment instrument against an invoice",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "get": {
+        "description": "Returns both processed and out-of-band payments for one invoice, newest first, using cursor pagination. Every row exposes `effectiveAt`; out-of-band rows additionally expose `method`, `reference`, and `recordedBy` so the dashboard can render payment history without a second lookup.",
+        "operationId": "InvoicesController_listPayments",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) whose payments are returned.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoiaW52cGF5XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated payment history for the requested invoice.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListInvoicePaymentsResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters or malformed cursor token."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
           },
           "404": {
             "description": "Invoice was not found for the provided merchant scope."
@@ -2082,7 +2222,277 @@
             "bearer": []
           }
         ],
-        "summary": "Mark an issued invoice as paid",
+        "summary": "List payments applied to an invoice",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}/out-of-band-payments": {
+      "post": {
+        "description": "Records money the merchant collected directly — cash, check, Zelle, and similar. There is no processor to wait on, so the allocation is applied and the invoice balance moves in the same request: a partial amount leaves the invoice `partially_paid`, and the full remaining balance marks it `paid`. Note that `effectiveAt` drives the invoice `paidAt`, so back-dating a cash payment back-dates the paid date. The recording actor is taken from the authenticated principal and is never accepted in the body. Idempotent by idempotency key per invoice.",
+        "operationId": "InvoicesController_recordOutOfBand",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) the payment applies to.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Out-of-band payload with idempotency key, merchant scope, method, and optional amount, effective date, and reference.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecordOutOfBandInvoicePaymentDto"
+              },
+              "examples": {
+                "cashInFull": {
+                  "summary": "Cash, full remaining balance",
+                  "value": {
+                    "idempotencyKey": "idem-inv-oob-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "method": "cash"
+                  }
+                },
+                "checkPartial": {
+                  "summary": "Check, partial amount with check number",
+                  "value": {
+                    "idempotencyKey": "idem-inv-oob-02",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "method": "check",
+                    "amount": 20000,
+                    "reference": "Check #1042"
+                  }
+                },
+                "zelleBackDated": {
+                  "summary": "Zelle, back-dated to when the transfer landed",
+                  "value": {
+                    "idempotencyKey": "idem-inv-oob-03",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "method": "zelle",
+                    "amount": 50000,
+                    "effectiveAt": "2026-07-28T15:04:00.000Z",
+                    "reference": "Zelle confirmation 8XK21QP"
+                  }
+                },
+                "otherRequiresReference": {
+                  "summary": "Other, which requires a reference",
+                  "value": {
+                    "idempotencyKey": "idem-inv-oob-04",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "method": "other",
+                    "reference": "Bartered against Q3 hosting credit"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Payment recorded. Returns the invoice with its balance already updated, plus the `applied` allocation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePaymentResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, invoice is not `issued` or `partially_paid`, amount exceeds the remaining balance, `effectiveAt` is in the future, or `method` is `other` without a reference."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          },
+          "409": {
+            "description": "Concurrent payment activity kept moving the balance while this request was in flight. Re-read the invoice and retry — the remaining balance may now differ."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Record a payment received outside PayGood",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}/payments/{allocationId}/reverse": {
+      "post": {
+        "description": "Unwinds an out-of-band payment that was recorded in error, dropping the invoice back to `partially_paid` or `issued` depending on the remaining balance. The allocation is kept as `reversed` rather than deleted so the audit trail survives. Only `out_of_band` allocations can be reversed — a processed payment moved real funds and must be refunded instead.",
+        "operationId": "InvoicesController_reversePayment",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) the allocation belongs to.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          },
+          {
+            "name": "allocationId",
+            "required": true,
+            "in": "path",
+            "description": "Invoice payment allocation TypeID (`invpay_...`) to reverse.",
+            "schema": {
+              "example": "invpay_01hxy8m1nqk9g3x3y3p0azq2r1",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Reversal payload with merchant scope. No idempotency key: only an `applied` allocation can be reversed, so a replay is rejected rather than duplicated.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReverseInvoicePaymentDto"
+              },
+              "examples": {
+                "reverseCashEntry": {
+                  "summary": "Reverse a cash entry recorded in error",
+                  "value": {
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment reversed. Returns the invoice with its balance reduced, plus the `reversed` allocation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePaymentResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Allocation is a processed `payment` (refund it instead) or is not currently `applied`."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice or allocation was not found for the provided merchant scope."
+          },
+          "409": {
+            "description": "Concurrent payment activity kept moving the balance while this request was in flight. Re-read the invoice and retry."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Reverse a recorded out-of-band payment",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
+    "/invoices/{id}/send": {
+      "post": {
+        "description": "Sends an invoice notification email to the customer by default, or to an optional override recipient. Draft invoices are first transitioned to issued.",
+        "operationId": "InvoicesController_send",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to send.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Send payload with idempotency key, merchant scope, and optional recipient email override.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendInvoiceDto"
+              },
+              "examples": {
+                "sendToCustomerDefault": {
+                  "summary": "Send to customer email on file",
+                  "value": {
+                    "idempotencyKey": "idem-inv-send-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+                  }
+                },
+                "sendToOverrideRecipient": {
+                  "summary": "Send to an override recipient",
+                  "value": {
+                    "idempotencyKey": "idem-inv-send-02",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "recipientEmail": "billing@customer.example"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Invoice email sent successfully. Response reflects the latest invoice state (`issued` if previously `draft`, unchanged when already `issued`).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed (invalid ids/email), invoice cannot be sent from its current status (`paid`/`void`), or no recipient email is available."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope, or merchant/customer recipient data is unavailable."
+          },
+          "409": {
+            "description": "Invoice changed while this request was in flight. Re-read the invoice and retry; no email is sent when this is returned."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Send an invoice email",
         "tags": [
           "invoices"
         ]
@@ -2146,6 +2556,9 @@
           },
           "404": {
             "description": "Invoice was not found for the provided merchant scope."
+          },
+          "409": {
+            "description": "Invoice changed while this request was in flight — most likely a payment landed. Re-read the invoice: an invoice with payments applied can no longer be voided."
           }
         },
         "security": [
@@ -2223,9 +2636,189 @@
         ]
       }
     },
+    "/checkout/sessions": {
+      "post": {
+        "description": "Resolves an invoice by its public URL slug and returns a short-lived bearer token plus an anonymous payable projection. Returns 404 when the slug is unknown or the invoice is not payable.",
+        "operationId": "CheckoutSessionsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Invoice pay-link slug from the customer-facing URL.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckoutSessionDto"
+              },
+              "examples": {
+                "mintSession": {
+                  "summary": "Mint a session",
+                  "value": {
+                    "slug": "Kq7Zx3nP9tRv2wYbLmN4cUd1"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Checkout session minted. Store the token client-side and send it as a Bearer token on subsequent requests.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCheckoutSessionResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Slug did not resolve to a payable invoice. Deliberately uniform for unknown, draft, void, and paid invoices."
+          }
+        },
+        "summary": "Mint a checkout session for an invoice pay link",
+        "tags": [
+          "checkout"
+        ]
+      }
+    },
+    "/checkout/sessions/{id}": {
+      "get": {
+        "description": "Returns the current session status and a fresh payable invoice projection for the page to re-render after a refresh.",
+        "operationId": "CheckoutSessionsController_get",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Checkout session TypeID (`chks_...`).",
+            "schema": {
+              "example": "chks_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Checkout session state and payable projection.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCheckoutSessionResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing, invalid, or expired checkout session token."
+          },
+          "404": {
+            "description": "Session id does not match the authenticated session."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Read checkout session state",
+        "tags": [
+          "checkout"
+        ]
+      }
+    },
+    "/checkout/sessions/{id}/payments": {
+      "post": {
+        "description": "Registers a payment instrument from a Basis Theory vault token and charges the invoice behind the checkout session. The browser must never send customer, merchant, or payment-instrument ids.",
+        "operationId": "CheckoutSessionsController_pay",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Checkout session TypeID (`chks_...`).",
+            "schema": {
+              "example": "chks_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Payment payload with idempotency key and a new-card payment method.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCheckoutSessionPaymentDto"
+              },
+              "examples": {
+                "payFullBalance": {
+                  "summary": "Pay the full remaining balance",
+                  "value": {
+                    "idempotencyKey": "checkout-pay-01",
+                    "paymentMethod": {
+                      "type": "new_card",
+                      "vaultToken": {
+                        "id": "bt_token_abc123",
+                        "provider": "basistheory"
+                      },
+                      "instrumentHolderName": "Amina Diallo"
+                    }
+                  }
+                },
+                "payPartialAmount": {
+                  "summary": "Pay a partial amount",
+                  "value": {
+                    "idempotencyKey": "checkout-pay-02",
+                    "paymentMethod": {
+                      "type": "new_card",
+                      "vaultToken": {
+                        "id": "bt_token_abc123",
+                        "provider": "basistheory"
+                      },
+                      "instrumentHolderName": "Amina Diallo"
+                    },
+                    "amount": 20000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Charge accepted. Allocation is pending until the processor reports capture.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCheckoutSessionPaymentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed or the requested amount exceeds the remaining balance."
+          },
+          "401": {
+            "description": "Missing, invalid, or expired checkout session token, or attempt cap exceeded."
+          },
+          "404": {
+            "description": "Session id does not match the authenticated session."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Pay an invoice from checkout",
+        "tags": [
+          "checkout"
+        ]
+      }
+    },
     "/payouts": {
       "get": {
-        "description": "Returns payouts sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively.",
+        "description": "Returns payout transfer movements to a merchant bank account sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively.",
         "operationId": "PayoutsController_list",
         "parameters": [
           {
@@ -2302,10 +2895,58 @@
         ]
       }
     },
-    "/payouts/dashboard": {
+    "/payouts/{id}": {
       "get": {
-        "description": "Returns dashboard payouts sorted by newest first using cursor pagination. Uses the same listing logic as `GET /payouts`.",
-        "operationId": "PayoutsController_listDashboard",
+        "description": "Returns a single payout transfer movement by id scoped to a merchant.",
+        "operationId": "PayoutsController_getById",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Payout TypeID (`payout_...`) to fetch.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payout details",
+        "tags": [
+          "payouts"
+        ]
+      }
+    },
+    "/dashboard/payouts": {
+      "get": {
+        "description": "Returns dashboard payout transfer movements sorted by newest first using cursor pagination. Uses the same listing logic as `GET /payouts`.",
+        "operationId": "DashboardPayoutsController_list",
         "parameters": [
           {
             "name": "end",
@@ -2377,31 +3018,62 @@
         ],
         "summary": "List payouts for merchant dashboard",
         "tags": [
-          "payouts"
+          "dashboard"
         ]
       }
     },
-    "/payouts/{id}": {
+    "/dashboard/payouts/settlement-batches": {
       "get": {
-        "description": "Returns a single payout by id scoped to a merchant.",
-        "operationId": "PayoutsController_getById",
+        "description": "Returns settlement batch economics sorted by newest first using cursor pagination.",
+        "operationId": "DashboardPayoutsController_listSettlementBatchesDashboard",
         "parameters": [
           {
-            "name": "merchantId",
-            "required": true,
+            "name": "end",
+            "required": false,
             "in": "query",
-            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
+            "description": "Inclusive ISO-8601 upper bound for settlement provider-created time (`periodStart`).",
             "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "example": "2026-03-31T23:59:59.999Z",
               "type": "string"
             }
           },
           {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Payout TypeID (`payout_...`) to fetch.",
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for settlement provider-created time (`periodStart`).",
             "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoic2V0YmF0Y2hfMDEuLi4ifX0=",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope the list.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
               "type": "string"
             }
           }
@@ -2412,7 +3084,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PayoutResponseDto"
+                  "$ref": "#/components/schemas/ListSettlementBatchesResponseDto"
                 }
               }
             }
@@ -2423,9 +3095,127 @@
             "bearer": []
           }
         ],
-        "summary": "Get payout details",
+        "summary": "List settlement batches for merchant dashboard",
         "tags": [
-          "payouts"
+          "dashboard"
+        ]
+      }
+    },
+    "/dashboard/payouts/settlement-batches/summary": {
+      "get": {
+        "description": "Returns merchant settlement batch totals (volume, fees, net) for an optional date window.",
+        "operationId": "DashboardPayoutsController_getSettlementBatchesSummary",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for settlement provider-created time (`periodStart`).",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for settlement provider-created time (`periodStart`).",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope summary metrics.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettlementBatchSummaryResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get settlement batch summary metrics",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/dashboard/payouts/overview": {
+      "get": {
+        "description": "Returns payout transfer totals and settlement batch totals for the same merchant/date window.",
+        "operationId": "DashboardPayoutsController_getOverview",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for `createdAt` filters.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for `createdAt` filters.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope overview metrics.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutsDashboardOverviewResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get payouts and settlement batch dashboard overview",
+        "tags": [
+          "dashboard"
         ]
       }
     },
@@ -3017,7 +3807,7 @@
         ]
       }
     },
-    "/merchants/dashboard/home/summary-metrics": {
+    "/dashboard/merchants/home/summary-metrics": {
       "get": {
         "operationId": "MerchantDashboardController_getSummary",
         "parameters": [
@@ -3078,11 +3868,11 @@
         },
         "summary": "Get merchant dashboard home summary metrics for a selected window",
         "tags": [
-          "merchant-dashboard"
+          "dashboard"
         ]
       }
     },
-    "/merchants/dashboard/api-keys": {
+    "/dashboard/merchants/api-keys": {
       "get": {
         "description": "Returns dashboard-safe API key metadata for the selected merchant.",
         "operationId": "MerchantDashboardApiKeysController_list",
@@ -3111,11 +3901,11 @@
         },
         "summary": "List merchant dashboard API keys",
         "tags": [
-          "merchant-dashboard"
+          "dashboard"
         ]
       }
     },
-    "/payout-accounts/dashboard": {
+    "/dashboard/payout-accounts": {
       "get": {
         "description": "Returns the current payout account for a merchant, if one exists. Supports operator bearer auth and member session auth.",
         "operationId": "PayoutAccountsDashboardController_getCurrent",
@@ -3150,7 +3940,7 @@
         ],
         "summary": "Get current payout account for merchant dashboard",
         "tags": [
-          "payout-accounts"
+          "dashboard"
         ]
       }
     },
@@ -3292,6 +4082,602 @@
         "summary": "Revoke a merchant API key",
         "tags": [
           "merchant-api-keys"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/invitations": {
+      "post": {
+        "operationId": "MerchantInvitationsController_create",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) receiving the invitation.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Invite payload with idempotency key, email, optional name, and role (`admin` or `viewer`).",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMerchantInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateMerchantInvitationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Invite a member to manage a merchant dashboard",
+        "tags": [
+          "merchant-invitations"
+        ]
+      },
+      "get": {
+        "operationId": "MerchantInvitationsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque pagination cursor from a previous response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum invitations to return (default 20, max 100).",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Optional invitation status filter.",
+            "schema": {
+              "enum": [
+                "pending",
+                "accepted",
+                "revoked"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) whose invitations are listed.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListMerchantInvitationsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List merchant team invitations",
+        "tags": [
+          "merchant-invitations"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/invitations/{invitationId}/revoke": {
+      "post": {
+        "operationId": "MerchantInvitationsController_revoke",
+        "parameters": [
+          {
+            "name": "invitationId",
+            "required": true,
+            "in": "path",
+            "description": "Invitation TypeID (`merinv_...`) to revoke.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) owning the invitation.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Revoke payload with idempotency key.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeMerchantInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantInvitationResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Revoke a pending merchant team invitation",
+        "tags": [
+          "merchant-invitations"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/members": {
+      "get": {
+        "operationId": "MerchantMembersController_list",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Merchant TypeID (`mer_...`) whose team roster is listed.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListMerchantMembersResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List members with access to a merchant dashboard",
+        "tags": [
+          "merchant-members"
+        ]
+      }
+    },
+    "/member/merchant-invitations/preview": {
+      "post": {
+        "operationId": "MemberMerchantInvitationsController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewMerchantInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewMerchantInvitationResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid invitation token"
+          },
+          "410": {
+            "description": "Invitation expired"
+          }
+        },
+        "summary": "Preview a merchant team invitation from its token",
+        "tags": [
+          "member-merchant-invitations"
+        ]
+      }
+    },
+    "/member/merchant-invitations/accept": {
+      "post": {
+        "operationId": "MemberMerchantInvitationsController_accept",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptMerchantInvitationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantInvitationResponseDto"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Signed-in email mismatch"
+          },
+          "404": {
+            "description": "Invalid invitation token"
+          },
+          "409": {
+            "description": "Member already has access"
+          },
+          "410": {
+            "description": "Invitation expired"
+          }
+        },
+        "summary": "Accept a merchant team invitation",
+        "tags": [
+          "member-merchant-invitations"
+        ]
+      }
+    },
+    "/referrals/preview": {
+      "post": {
+        "operationId": "MemberMerchantReferralsController_preview",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewMerchantReferralDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewMerchantReferralResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid referral code"
+          }
+        },
+        "summary": "Preview a merchant referral code before signup",
+        "tags": [
+          "member-merchant-referrals"
+        ]
+      }
+    },
+    "/member/referrals/claim": {
+      "post": {
+        "operationId": "MemberMerchantReferralsController_claim",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClaimMerchantReferralDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantReferralResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid referral code"
+          },
+          "409": {
+            "description": "Self-referral or conflict"
+          }
+        },
+        "summary": "Claim a merchant referral after member signup",
+        "tags": [
+          "member-merchant-referrals"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/referrals": {
+      "get": {
+        "operationId": "MerchantReferralsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque pagination cursor from a previous response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum referrals to return (default 20, max 100).",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Optional referral status filter.",
+            "schema": {
+              "enum": [
+                "pending",
+                "completed"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Referring merchant TypeID (`mer_...`).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListMerchantReferralsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List merchant referrals",
+        "tags": [
+          "merchant-referrals"
+        ]
+      }
+    },
+    "/merchants/{merchantId}/referral-code": {
+      "get": {
+        "operationId": "MerchantReferralCodeController_getCode",
+        "parameters": [
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "path",
+            "description": "Referring merchant TypeID (`mer_...`).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MerchantReferralCodeResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get or create the stable referral code for a merchant",
+        "tags": [
+          "merchant-referrals"
+        ]
+      }
+    },
+    "/dashboard/merchants/referrals": {
+      "get": {
+        "operationId": "MerchantDashboardReferralsController_list",
+        "parameters": [
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque pagination cursor from a previous response.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Maximum referrals to return (default 20, max 100).",
+            "schema": {
+              "example": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Optional referral status filter.",
+            "schema": {
+              "enum": [
+                "pending",
+                "completed"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Referring merchant TypeID (`mer_...`).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListMerchantReferralsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "List referrals for the current merchant dashboard context",
+        "tags": [
+          "dashboard"
+        ]
+      }
+    },
+    "/member/reference/mccs": {
+      "get": {
+        "description": "Returns the allowlist of merchant category codes (MCCs) for the signup business profile dropdown.\n\n**Authentication:** Requires an authenticated member session. Send the `pg_member` httpOnly cookie obtained from `POST /member-auth/otp/verify`. Requests without a valid session receive `401 Unauthorized`.\n\n**Signup flow:**\n1. Authenticate the merchant via member OTP (`POST /member-auth/otp/request`, then `POST /member-auth/otp/verify`).\n2. Call this endpoint to populate the MCC dropdown.\n3. When saving the business profile, submit the selected entry's `code` as `businessProfile.mcc` on `PATCH /merchant-applications/:id/business-profile`. Only codes returned by this endpoint are accepted.\n\n**Response shape:** JSON array ordered for display. Each item has `code` (wire value) and `displayName` (UI label).",
+        "operationId": "MemberReferenceController_listMccs",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Supported merchant category codes for onboarding. Use `code` when patching the merchant application business profile.",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "code",
+                  "displayName"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "description": "Four-digit MCC to submit as `businessProfile.mcc` when updating the merchant application.",
+                    "example": "8661"
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "description": "Human-readable label for the signup dropdown. Display only; not submitted to the API.",
+                    "example": "Religious Organizations"
+                  }
+                }
+              },
+              "example": [
+                {
+                  "code": "8661",
+                  "displayName": "Religious Organizations"
+                },
+                {
+                  "code": "8398",
+                  "displayName": "Charitable and Social Service Organizations"
+                }
+              ]
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupportedMccCodeResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid member session. Authenticate via `POST /member-auth/otp/verify` and include the `pg_member` session cookie on the request."
+          }
+        },
+        "summary": "List supported merchant category codes for onboarding",
+        "tags": [
+          "member-reference"
         ]
       }
     },
@@ -3970,10 +5356,13 @@
           "page"
         ]
       },
-      "CustomerDashboardDetailResponseDto": {
+      "DashboardCustomerDetailResponseDto": {
         "type": "object",
         "properties": {
           "customerId": {
+            "type": "string"
+          },
+          "merchantId": {
             "type": "string"
           },
           "name": {
@@ -3985,12 +5374,59 @@
             "format": "email",
             "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
           },
+          "phone": {
+            "type": "string",
+            "minLength": 1
+          },
+          "entityType": {
+            "type": "string",
+            "enum": [
+              "individual",
+              "organization"
+            ]
+          },
+          "relationshipSource": {
+            "type": "string",
+            "enum": [
+              "created",
+              "transacted"
+            ]
+          },
+          "firstSeenAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "customerCreatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
           "lifetimeSpend": {
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
           },
-          "recentTransactions": {
+          "openInvoices": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "totalRemaining": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "count",
+              "totalRemaining"
+            ]
+          },
+          "recentPayments": {
             "type": "array",
             "items": {
               "type": "object",
@@ -4006,6 +5442,12 @@
                   "minimum": -9007199254740991,
                   "maximum": 9007199254740991
                 },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
                 "paymentDate": {
                   "type": "string",
                   "format": "date-time",
@@ -4019,17 +5461,132 @@
                 "id",
                 "status",
                 "amount",
+                "currency",
                 "paymentDate"
+              ]
+            }
+          },
+          "recentInvoices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invoiceId": {
+                  "type": "string"
+                },
+                "invoiceNumber": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "issued",
+                    "partially_paid",
+                    "paid",
+                    "void"
+                  ]
+                },
+                "total": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "amountPaid": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "amountRemaining": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "dueDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "invoiceId",
+                "invoiceNumber",
+                "status",
+                "total",
+                "amountPaid",
+                "amountRemaining",
+                "createdAt"
               ]
             }
           }
         },
         "required": [
           "customerId",
+          "merchantId",
           "name",
           "email",
+          "entityType",
+          "relationshipSource",
+          "firstSeenAt",
+          "customerCreatedAt",
           "lifetimeSpend",
-          "recentTransactions"
+          "openInvoices",
+          "recentPayments",
+          "recentInvoices"
         ]
       },
       "CustomerResponseDto": {
@@ -4289,6 +5846,18 @@
         },
         "required": [
           "last4"
+        ]
+      },
+      "BasisTheorySessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionKey": {
+            "type": "string",
+            "description": "Authorized Basis Theory session key for Elements initialization"
+          }
+        },
+        "required": [
+          "sessionKey"
         ]
       },
       "PaymentInstrumentResponseDto": {
@@ -4900,6 +6469,12 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
                     }
                   },
                   "required": [
@@ -4946,7 +6521,8 @@
           },
           "invoiceUrlSlug": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Secret pay-link token. Anyone holding this value can view and pay the invoice anonymously, so treat it like a credential: safe to send to the customer, never safe to log or expose publicly. Unguessable and unrelated to `invoiceId`, so it can be rotated without changing the invoice."
           },
           "idempotencyKey": {
             "type": "string",
@@ -4969,6 +6545,7 @@
             "enum": [
               "draft",
               "issued",
+              "partially_paid",
               "paid",
               "void"
             ]
@@ -5049,6 +6626,12 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
                     "lineTotal": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -5059,6 +6642,7 @@
                     "kind",
                     "description",
                     "amount",
+                    "quantity",
                     "lineTotal"
                   ],
                   "additionalProperties": false
@@ -5066,7 +6650,7 @@
               ]
             }
           },
-          "subtotal": {
+          "productTotal": {
             "type": "object",
             "properties": {
               "amount": {
@@ -5108,6 +6692,50 @@
               "currency"
             ]
           },
+          "amountPaid": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "description": "Sum of applied payment allocations, both processed and out-of-band."
+          },
+          "amountRemaining": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ],
+            "description": "Computed as `total` minus `amountPaid`. Zero when the invoice is fully paid."
+          },
           "dueDate": {
             "type": "string",
             "format": "date-time",
@@ -5147,8 +6775,10 @@
           "status",
           "currency",
           "lineItems",
-          "subtotal",
+          "productTotal",
           "total",
+          "amountPaid",
+          "amountRemaining",
           "createdAt",
           "updatedAt"
         ]
@@ -5233,6 +6863,12 @@
                       "type": "integer",
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
+                    },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
                     }
                   },
                   "required": [
@@ -5270,20 +6906,677 @@
           "lineItems"
         ]
       },
-      "MarkInvoicePaidDto": {
+      "ChargeInvoiceDto": {
         "type": "object",
         "properties": {
           "idempotencyKey": {
             "type": "string",
-            "minLength": 1
+            "minLength": 1,
+            "description": "Idempotency key for safe retries of the charge per invoice."
           },
           "merchantId": {
-            "type": "string"
+            "type": "string",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope."
           },
-          "paidAt": {
+          "paymentInstrumentId": {
+            "type": "string",
+            "description": "Payment instrument TypeID (`pi_...`) to charge. Must belong to the invoice's customer and be active."
+          },
+          "amount": {
+            "description": "Minor-unit amount to charge. Defaults to the full remaining balance. Must not exceed it.",
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "paymentInstrumentId"
+        ]
+      },
+      "InvoicePaymentResultDto": {
+        "type": "object",
+        "properties": {
+          "invoice": {
+            "type": "object",
+            "properties": {
+              "invoiceId": {
+                "type": "string"
+              },
+              "invoiceNumber": {
+                "type": "string",
+                "minLength": 1
+              },
+              "invoiceUrlSlug": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Secret pay-link token. Anyone holding this value can view and pay the invoice anonymously, so treat it like a credential: safe to send to the customer, never safe to log or expose publicly. Unguessable and unrelated to `invoiceId`, so it can be rotated without changing the invoice."
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 1
+              },
+              "merchantId": {
+                "type": "string"
+              },
+              "customerId": {
+                "type": "string"
+              },
+              "currentRevisionNumber": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "issued",
+                  "partially_paid",
+                  "paid",
+                  "void"
+                ]
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "lineItems": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "product_charge"
+                          ]
+                        },
+                        "productId": {
+                          "type": "string"
+                        },
+                        "priceId": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0
+                        },
+                        "unitAmount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "lineTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "productId",
+                        "description",
+                        "quantity",
+                        "unitAmount",
+                        "lineTotal"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "manual_adjustment"
+                          ]
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "amount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0
+                        },
+                        "lineTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "description",
+                        "amount",
+                        "quantity",
+                        "lineTotal"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "productTotal": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "amountPaid": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "description": "Sum of applied payment allocations, both processed and out-of-band."
+              },
+              "amountRemaining": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ],
+                "description": "Computed as `total` minus `amountPaid`. Zero when the invoice is fully paid."
+              },
+              "dueDate": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "paidAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "notes": {
+                "type": "string"
+              },
+              "metadata": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "invoiceId",
+              "invoiceNumber",
+              "invoiceUrlSlug",
+              "idempotencyKey",
+              "merchantId",
+              "customerId",
+              "currentRevisionNumber",
+              "status",
+              "currency",
+              "lineItems",
+              "productTotal",
+              "total",
+              "amountPaid",
+              "amountRemaining",
+              "createdAt",
+              "updatedAt"
+            ]
+          },
+          "allocation": {
+            "type": "object",
+            "properties": {
+              "allocationId": {
+                "type": "string"
+              },
+              "invoiceId": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "payment",
+                  "out_of_band"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "applied",
+                  "canceled",
+                  "reversed"
+                ]
+              },
+              "amount": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "paymentId": {
+                "description": "Present only for `payment` allocations.",
+                "type": "string"
+              },
+              "method": {
+                "description": "Present only for `out_of_band` allocations.",
+                "type": "string",
+                "enum": [
+                  "cash",
+                  "check",
+                  "bank_transfer",
+                  "wire",
+                  "zelle",
+                  "venmo",
+                  "cash_app",
+                  "paypal",
+                  "other"
+                ]
+              },
+              "reference": {
+                "type": "string"
+              },
+              "recordedBy": {
+                "description": "Who recorded an out-of-band payment, snapshotted at write time. Deliberately omits the raw principal id.",
+                "type": "object",
+                "properties": {
+                  "principalType": {
+                    "type": "string",
+                    "enum": [
+                      "member",
+                      "operator",
+                      "api_key"
+                    ]
+                  },
+                  "display": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "principalType"
+                ]
+              },
+              "effectiveAt": {
+                "description": "When the money arrived, per the processor for `payment` rows and per the merchant for `out_of_band` rows. Null while a payment allocation is still pending.",
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "appliedAt": {
+                "description": "When PayGood credited the amount to the invoice balance.",
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "canceledAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "reversedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "allocationId",
+              "invoiceId",
+              "kind",
+              "status",
+              "amount",
+              "createdAt"
+            ]
+          }
+        },
+        "required": [
+          "invoice",
+          "allocation"
+        ]
+      },
+      "RecordOutOfBandInvoicePaymentDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key for safe retries of the recording per invoice."
+          },
+          "merchantId": {
+            "type": "string",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope."
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "cash",
+              "check",
+              "bank_transfer",
+              "wire",
+              "zelle",
+              "venmo",
+              "cash_app",
+              "paypal",
+              "other"
+            ],
+            "description": "How the money was received outside PayGood."
+          },
+          "amount": {
+            "description": "Minor-unit amount received. Defaults to the full remaining balance. Must not exceed it.",
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "effectiveAt": {
+            "description": "When the money actually arrived. Defaults to now, cannot be in the future, and drives the invoice `paidAt` — so back-dating a cash payment back-dates the paid date.",
             "type": "string",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "reference": {
+            "description": "Check number, Zelle confirmation, or free-form note. Required when `method` is `other`.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "merchantId",
+          "method"
+        ]
+      },
+      "ReverseInvoicePaymentDto": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope."
+          }
+        },
+        "required": [
+          "merchantId"
+        ]
+      },
+      "ListInvoicePaymentsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "allocationId": {
+                  "type": "string"
+                },
+                "invoiceId": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "payment",
+                    "out_of_band"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "applied",
+                    "canceled",
+                    "reversed"
+                  ]
+                },
+                "amount": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "paymentId": {
+                  "description": "Present only for `payment` allocations.",
+                  "type": "string"
+                },
+                "method": {
+                  "description": "Present only for `out_of_band` allocations.",
+                  "type": "string",
+                  "enum": [
+                    "cash",
+                    "check",
+                    "bank_transfer",
+                    "wire",
+                    "zelle",
+                    "venmo",
+                    "cash_app",
+                    "paypal",
+                    "other"
+                  ]
+                },
+                "reference": {
+                  "type": "string"
+                },
+                "recordedBy": {
+                  "description": "Who recorded an out-of-band payment, snapshotted at write time. Deliberately omits the raw principal id.",
+                  "type": "object",
+                  "properties": {
+                    "principalType": {
+                      "type": "string",
+                      "enum": [
+                        "member",
+                        "operator",
+                        "api_key"
+                      ]
+                    },
+                    "display": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "principalType"
+                  ]
+                },
+                "effectiveAt": {
+                  "description": "When the money arrived, per the processor for `payment` rows and per the merchant for `out_of_band` rows. Null while a payment allocation is still pending.",
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "appliedAt": {
+                  "description": "When PayGood credited the amount to the invoice balance.",
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "canceledAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "reversedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "allocationId",
+                "invoiceId",
+                "kind",
+                "status",
+                "amount",
+                "createdAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "SendInvoiceDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Idempotency key for safe retries of the send operation per invoice."
+          },
+          "merchantId": {
+            "type": "string",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope."
+          },
+          "recipientEmail": {
+            "description": "Optional override recipient. When omitted, PayGood sends to the customer's email on file.",
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
           }
         },
         "required": [
@@ -5324,7 +7617,8 @@
                 },
                 "invoiceUrlSlug": {
                   "type": "string",
-                  "minLength": 1
+                  "minLength": 1,
+                  "description": "Secret pay-link token. Anyone holding this value can view and pay the invoice anonymously, so treat it like a credential: safe to send to the customer, never safe to log or expose publicly. Unguessable and unrelated to `invoiceId`, so it can be rotated without changing the invoice."
                 },
                 "idempotencyKey": {
                   "type": "string",
@@ -5347,6 +7641,7 @@
                   "enum": [
                     "draft",
                     "issued",
+                    "partially_paid",
                     "paid",
                     "void"
                   ]
@@ -5427,6 +7722,12 @@
                             "minimum": -9007199254740991,
                             "maximum": 9007199254740991
                           },
+                          "quantity": {
+                            "type": "integer",
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0
+                          },
                           "lineTotal": {
                             "type": "integer",
                             "minimum": -9007199254740991,
@@ -5437,6 +7738,7 @@
                           "kind",
                           "description",
                           "amount",
+                          "quantity",
                           "lineTotal"
                         ],
                         "additionalProperties": false
@@ -5444,7 +7746,7 @@
                     ]
                   }
                 },
-                "subtotal": {
+                "productTotal": {
                   "type": "object",
                   "properties": {
                     "amount": {
@@ -5486,6 +7788,50 @@
                     "currency"
                   ]
                 },
+                "amountPaid": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ],
+                  "description": "Sum of applied payment allocations, both processed and out-of-band."
+                },
+                "amountRemaining": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ],
+                  "description": "Computed as `total` minus `amountPaid`. Zero when the invoice is fully paid."
+                },
                 "dueDate": {
                   "type": "string",
                   "format": "date-time",
@@ -5525,8 +7871,10 @@
                 "status",
                 "currency",
                 "lineItems",
-                "subtotal",
+                "productTotal",
                 "total",
+                "amountPaid",
+                "amountRemaining",
                 "createdAt",
                 "updatedAt"
               ]
@@ -5644,6 +7992,12 @@
                       "minimum": -9007199254740991,
                       "maximum": 9007199254740991
                     },
+                    "quantity": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
                     "lineTotal": {
                       "type": "integer",
                       "minimum": -9007199254740991,
@@ -5654,6 +8008,7 @@
                     "kind",
                     "description",
                     "amount",
+                    "quantity",
                     "lineTotal"
                   ],
                   "additionalProperties": false
@@ -5661,7 +8016,7 @@
               ]
             }
           },
-          "subtotal": {
+          "productTotal": {
             "type": "object",
             "properties": {
               "amount": {
@@ -5708,6 +8063,7 @@
             "enum": [
               "draft",
               "issued",
+              "partially_paid",
               "paid",
               "void"
             ]
@@ -5739,153 +8095,584 @@
           "idempotencyKey",
           "currency",
           "lineItems",
-          "subtotal",
+          "productTotal",
           "total",
           "status",
           "createdAt"
         ]
       },
-      "ListPayoutsResponseDto": {
+      "CreateCheckoutSessionDto": {
         "type": "object",
         "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "merchantId": {
-                  "type": "string"
-                },
-                "payoutAccountId": {
-                  "type": "string"
-                },
-                "processor": {
-                  "type": "string",
-                  "enum": [
-                    "finix"
-                  ]
-                },
-                "processorReference": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "pending",
-                    "sent",
-                    "paid",
-                    "failed"
-                  ]
-                },
-                "sentAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                },
-                "paidAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                },
-                "failedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                },
-                "grossAmount": {
-                  "type": "integer",
-                  "exclusiveMinimum": true,
-                  "maximum": 9007199254740991,
-                  "minimum": 0
-                },
-                "feeAmount": {
-                  "type": "integer",
-                  "exclusiveMinimum": true,
-                  "maximum": 9007199254740991,
-                  "minimum": 0
-                },
-                "netAmount": {
-                  "type": "integer",
-                  "exclusiveMinimum": true,
-                  "maximum": 9007199254740991,
-                  "minimum": 0
-                },
-                "currency": {
-                  "description": "Supported currency code (USD, CAD)",
-                  "type": "string",
-                  "minLength": 3,
-                  "maxLength": 3
-                },
-                "failureCode": {
-                  "type": "string"
-                },
-                "failureMessage": {
-                  "type": "string"
-                },
-                "failureReason": {
-                  "type": "string",
-                  "enum": [
-                    "bank_account_closed",
-                    "insufficient_funds",
-                    "invalid_account",
-                    "account_frozen_or_restricted",
-                    "compliance_or_risk_blocked",
-                    "processor_unavailable",
-                    "unknown"
-                  ]
-                },
-                "createdAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                },
-                "updatedAt": {
-                  "type": "string",
-                  "format": "date-time",
-                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
-                }
-              },
-              "required": [
-                "id",
-                "merchantId",
-                "payoutAccountId",
-                "processor",
-                "processorReference",
-                "status",
-                "grossAmount",
-                "feeAmount",
-                "netAmount",
-                "currency",
-                "createdAt",
-                "updatedAt"
-              ]
-            }
+          "slug": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "slug"
+        ]
+      },
+      "CreateCheckoutSessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
           },
-          "page": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "payable": {
             "type": "object",
             "properties": {
-              "hasMore": {
-                "type": "boolean"
+              "merchantDisplayName": {
+                "type": "string",
+                "minLength": 1
               },
-              "nextCursor": {
-                "type": "string"
+              "invoiceNumber": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "issued",
+                  "partially_paid",
+                  "paid",
+                  "void"
+                ]
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "lineItems": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "product_charge"
+                          ]
+                        },
+                        "productId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "priceId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0
+                        },
+                        "unitAmount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "lineTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "productId",
+                        "description",
+                        "quantity",
+                        "unitAmount",
+                        "lineTotal"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "manual_adjustment"
+                          ]
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "amount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0
+                        },
+                        "lineTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "description",
+                        "amount",
+                        "quantity",
+                        "lineTotal"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "amountRemaining": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "dueDate": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
               }
             },
             "required": [
-              "hasMore"
+              "merchantDisplayName",
+              "invoiceNumber",
+              "status",
+              "currency",
+              "lineItems",
+              "total",
+              "amountRemaining"
             ]
           }
         },
         "required": [
-          "items",
-          "page"
+          "sessionId",
+          "token",
+          "expiresAt",
+          "payable"
         ]
       },
-      "ListDashboardPayoutsResponseDto": {
+      "GetCheckoutSessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "completed",
+              "expired",
+              "canceled"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "payable": {
+            "type": "object",
+            "properties": {
+              "merchantDisplayName": {
+                "type": "string",
+                "minLength": 1
+              },
+              "invoiceNumber": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "draft",
+                  "issued",
+                  "partially_paid",
+                  "paid",
+                  "void"
+                ]
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              },
+              "lineItems": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "product_charge"
+                          ]
+                        },
+                        "productId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "priceId": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0
+                        },
+                        "unitAmount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "lineTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "productId",
+                        "description",
+                        "quantity",
+                        "unitAmount",
+                        "lineTotal"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "manual_adjustment"
+                          ]
+                        },
+                        "description": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 500
+                        },
+                        "amount": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "exclusiveMinimum": true,
+                          "maximum": 9007199254740991,
+                          "minimum": 0
+                        },
+                        "lineTotal": {
+                          "type": "integer",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "description",
+                        "amount",
+                        "quantity",
+                        "lineTotal"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                }
+              },
+              "total": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "amountRemaining": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "dueDate": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "merchantDisplayName",
+              "invoiceNumber",
+              "status",
+              "currency",
+              "lineItems",
+              "total",
+              "amountRemaining"
+            ]
+          }
+        },
+        "required": [
+          "sessionId",
+          "status",
+          "expiresAt",
+          "payable"
+        ]
+      },
+      "CreateCheckoutSessionPaymentDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "paymentMethod": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "new_card"
+                ]
+              },
+              "vaultToken": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "basistheory"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider"
+                ]
+              },
+              "instrumentHolderName": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type",
+              "vaultToken",
+              "instrumentHolderName"
+            ]
+          },
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "paymentMethod"
+        ]
+      },
+      "CreateCheckoutSessionPaymentResponseDto": {
+        "type": "object",
+        "properties": {
+          "allocation": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "minLength": 1
+              },
+              "amount": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "effectiveAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "amount"
+            ]
+          },
+          "invoiceStatus": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "issued",
+              "partially_paid",
+              "paid",
+              "void"
+            ]
+          },
+          "amountRemaining": {
+            "type": "object",
+            "properties": {
+              "amount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3
+              }
+            },
+            "required": [
+              "amount",
+              "currency"
+            ]
+          }
+        },
+        "required": [
+          "allocation",
+          "invoiceStatus",
+          "amountRemaining"
+        ]
+      },
+      "ListPayoutsResponseDto": {
         "type": "object",
         "properties": {
           "items": {
@@ -6139,6 +8926,387 @@
           "updatedAt"
         ]
       },
+      "ListDashboardPayoutsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "payoutAccountId": {
+                  "type": "string"
+                },
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "processorReference": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "sent",
+                    "paid",
+                    "failed"
+                  ]
+                },
+                "sentAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "paidAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "failedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "grossAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "feeAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "netAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "failureCode": {
+                  "type": "string"
+                },
+                "failureMessage": {
+                  "type": "string"
+                },
+                "failureReason": {
+                  "type": "string",
+                  "enum": [
+                    "bank_account_closed",
+                    "insufficient_funds",
+                    "invalid_account",
+                    "account_frozen_or_restricted",
+                    "compliance_or_risk_blocked",
+                    "processor_unavailable",
+                    "unknown"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "merchantId",
+                "payoutAccountId",
+                "processor",
+                "processorReference",
+                "status",
+                "grossAmount",
+                "feeAmount",
+                "netAmount",
+                "currency",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "ListSettlementBatchesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "processorBatchReference": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "posted",
+                    "failed"
+                  ]
+                },
+                "processorStatus": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "periodStart": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "totalVolumeAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "feeAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "netAmount": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "providerOccurredAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "merchantId",
+                "processor",
+                "processorBatchReference",
+                "status",
+                "processorStatus",
+                "periodStart",
+                "periodEnd",
+                "totalVolumeAmount",
+                "feeAmount",
+                "netAmount",
+                "currency",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "SettlementBatchSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "totalVolumeAmount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "feeAmount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "netAmount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "nullable": true
+          }
+        },
+        "required": [
+          "totalVolumeAmount",
+          "feeAmount",
+          "netAmount",
+          "currency"
+        ]
+      },
+      "PayoutsDashboardOverviewResponseDto": {
+        "type": "object",
+        "properties": {
+          "payouts": {
+            "type": "object",
+            "properties": {
+              "grossAmount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "feeAmount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "netAmount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3,
+                "nullable": true
+              }
+            },
+            "required": [
+              "grossAmount",
+              "feeAmount",
+              "netAmount",
+              "currency"
+            ]
+          },
+          "settlementBatches": {
+            "type": "object",
+            "properties": {
+              "totalVolumeAmount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "feeAmount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "netAmount": {
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "currency": {
+                "description": "Supported currency code (USD, CAD)",
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 3,
+                "nullable": true
+              }
+            },
+            "required": [
+              "totalVolumeAmount",
+              "feeAmount",
+              "netAmount",
+              "currency"
+            ]
+          }
+        },
+        "required": [
+          "payouts",
+          "settlementBatches"
+        ]
+      },
       "CreateMerchantApplicationDto": {
         "type": "object",
         "properties": {
@@ -6155,6 +9323,11 @@
           },
           "parentMerchantId": {
             "type": "string"
+          },
+          "referralCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
           }
         },
         "required": [
@@ -7047,6 +10220,654 @@
           "merchantId",
           "status",
           "revokedAt"
+        ]
+      },
+      "CreateMerchantInvitationDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "viewer"
+            ]
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "email",
+          "role"
+        ]
+      },
+      "CreateMerchantInvitationResponseDto": {
+        "type": "object",
+        "properties": {
+          "invitation": {
+            "type": "object",
+            "properties": {
+              "invitationId": {
+                "type": "string"
+              },
+              "merchantId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email",
+                "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+              },
+              "name": {
+                "type": "string",
+                "nullable": true
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "admin",
+                  "viewer"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "accepted",
+                  "revoked"
+                ]
+              },
+              "expired": {
+                "type": "boolean"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "invitedByMemberId": {
+                "type": "string"
+              },
+              "acceptedByMemberId": {
+                "type": "string",
+                "nullable": true
+              },
+              "acceptedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              },
+              "revokedAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              }
+            },
+            "required": [
+              "invitationId",
+              "merchantId",
+              "email",
+              "name",
+              "role",
+              "status",
+              "expired",
+              "expiresAt",
+              "invitedByMemberId",
+              "acceptedByMemberId",
+              "acceptedAt",
+              "revokedAt",
+              "createdAt"
+            ]
+          },
+          "inviteUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "invitation",
+          "inviteUrl"
+        ]
+      },
+      "ListMerchantInvitationsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invitationId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "admin",
+                    "viewer"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "revoked"
+                  ]
+                },
+                "expired": {
+                  "type": "boolean"
+                },
+                "expiresAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "invitedByMemberId": {
+                  "type": "string"
+                },
+                "acceptedByMemberId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "acceptedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "revokedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "invitationId",
+                "merchantId",
+                "email",
+                "name",
+                "role",
+                "status",
+                "expired",
+                "expiresAt",
+                "invitedByMemberId",
+                "acceptedByMemberId",
+                "acceptedAt",
+                "revokedAt",
+                "createdAt"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "RevokeMerchantInvitationDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ]
+      },
+      "MerchantInvitationResponseDto": {
+        "type": "object",
+        "properties": {
+          "invitationId": {
+            "type": "string"
+          },
+          "merchantId": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "viewer"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "revoked"
+            ]
+          },
+          "expired": {
+            "type": "boolean"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "invitedByMemberId": {
+            "type": "string"
+          },
+          "acceptedByMemberId": {
+            "type": "string",
+            "nullable": true
+          },
+          "acceptedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "revokedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "invitationId",
+          "merchantId",
+          "email",
+          "name",
+          "role",
+          "status",
+          "expired",
+          "expiresAt",
+          "invitedByMemberId",
+          "acceptedByMemberId",
+          "acceptedAt",
+          "revokedAt",
+          "createdAt"
+        ]
+      },
+      "ListMerchantMembersResponseDto": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "memberId": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            },
+            "name": {
+              "type": "string",
+              "nullable": true
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "viewer"
+              ]
+            },
+            "grantedAt": {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+            }
+          },
+          "required": [
+            "memberId",
+            "email",
+            "name",
+            "role",
+            "grantedAt"
+          ]
+        }
+      },
+      "PreviewMerchantInvitationDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "PreviewMerchantInvitationResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "revoked"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "admin",
+              "viewer"
+            ]
+          },
+          "merchantName": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "expired": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "status",
+          "email",
+          "role",
+          "merchantName",
+          "expiresAt",
+          "expired"
+        ]
+      },
+      "AcceptMerchantInvitationDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "PreviewMerchantReferralDto": {
+        "type": "object",
+        "properties": {
+          "referralCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "required": [
+          "referralCode"
+        ]
+      },
+      "PreviewMerchantReferralResponseDto": {
+        "type": "object",
+        "properties": {
+          "referralCode": {
+            "type": "string"
+          },
+          "referrerMerchantId": {
+            "type": "string"
+          },
+          "merchantName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "referralCode",
+          "referrerMerchantId",
+          "merchantName"
+        ]
+      },
+      "ClaimMerchantReferralDto": {
+        "type": "object",
+        "properties": {
+          "referralCode": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "referralCode",
+          "idempotencyKey"
+        ]
+      },
+      "MerchantReferralResponseDto": {
+        "type": "object",
+        "properties": {
+          "referralId": {
+            "type": "string"
+          },
+          "referrerMerchantId": {
+            "type": "string"
+          },
+          "referralCode": {
+            "type": "string"
+          },
+          "refereeEmail": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "refereeMemberId": {
+            "type": "string",
+            "nullable": true
+          },
+          "refereeApplicationId": {
+            "type": "string",
+            "nullable": true
+          },
+          "refereeMerchantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "completed"
+            ]
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "referralId",
+          "referrerMerchantId",
+          "referralCode",
+          "refereeEmail",
+          "refereeMemberId",
+          "refereeApplicationId",
+          "refereeMerchantId",
+          "status",
+          "completedAt",
+          "createdAt"
+        ]
+      },
+      "ListMerchantReferralsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "referralId": {
+                  "type": "string"
+                },
+                "referrerMerchantId": {
+                  "type": "string"
+                },
+                "referralCode": {
+                  "type": "string"
+                },
+                "refereeEmail": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "refereeMemberId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "refereeApplicationId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "refereeMerchantId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "completed"
+                  ]
+                },
+                "completedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "referralId",
+                "referrerMerchantId",
+                "referralCode",
+                "refereeEmail",
+                "refereeMemberId",
+                "refereeApplicationId",
+                "refereeMerchantId",
+                "status",
+                "completedAt",
+                "createdAt"
+              ]
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ]
+      },
+      "MerchantReferralCodeResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "shareUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "code",
+          "shareUrl"
+        ]
+      },
+      "SupportedMccCodeResponseDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Four-digit merchant category code (MCC). Submit this value as `businessProfile.mcc` on `PATCH /merchant-applications/:id/business-profile`."
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Human-readable label for the signup dropdown. Display to the merchant; do not submit this field to the API."
+          }
+        },
+        "required": [
+          "code",
+          "displayName"
         ]
       }
     }
