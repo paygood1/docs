@@ -4628,38 +4628,6 @@
         "responses": {
           "200": {
             "description": "Supported merchant category codes for onboarding. Use `code` when patching the merchant application business profile.",
-            "schema": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "required": [
-                  "code",
-                  "displayName"
-                ],
-                "properties": {
-                  "code": {
-                    "type": "string",
-                    "description": "Four-digit MCC to submit as `businessProfile.mcc` when updating the merchant application.",
-                    "example": "8661"
-                  },
-                  "displayName": {
-                    "type": "string",
-                    "description": "Human-readable label for the signup dropdown. Display only; not submitted to the API.",
-                    "example": "Religious Organizations"
-                  }
-                }
-              },
-              "example": [
-                {
-                  "code": "8661",
-                  "displayName": "Religious Organizations"
-                },
-                {
-                  "code": "8398",
-                  "displayName": "Charitable and Social Service Organizations"
-                }
-              ]
-            },
             "content": {
               "application/json": {
                 "schema": {
