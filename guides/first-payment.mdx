@@ -20,9 +20,9 @@ This guide walks you through processing your first payment with PayGood. By the 
       -H 'Content-Type: application/json' \
       -d '{
         "entityType": "individual",
-        "firstName": "Jane",
-        "lastName": "Smith",
-        "email": "jane@example.com",
+        "firstName": "Amadou",
+        "lastName": "Bamba",
+        "email": "amadou@example.com",
         "phone": "+15551234567",
         "idempotencyKey": "cust-create-001"
       }'
@@ -45,7 +45,7 @@ This guide walks you through processing your first payment with PayGood. By the 
     ```
   </Step>
   <Step title="Register a payment instrument">
-    A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with your vault provider (Basis Theory) first, then pass the resulting token to PayGood.
+    A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with our collect component first, then pass the resulting token to PayGood.
 
     ```bash
     curl -X POST https://api.paygood.co/payment-instruments \
@@ -57,7 +57,6 @@ This guide walks you through processing your first payment with PayGood. By the 
         "type": "card",
         "vaultToken": {
           "id": "tok_01hxy9n3prk9h4y4z4q1bar3ch",
-          "provider": "basistheory"
         }
       }'
     ```
@@ -124,6 +123,7 @@ This guide walks you through processing your first payment with PayGood. By the 
         "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
         "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
         "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+        # either set priceId or amount+currency, not both
         "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
         "amount": 5000,
         "currency": "USD",

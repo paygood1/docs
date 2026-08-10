@@ -8,13 +8,27 @@ A payment instrument is a tokenized card or bank account linked to a customer. Y
 
 ## How tokenization works
 
-Raw card and bank account data never touches PayGood's servers. Before registering an instrument, you tokenize the sensitive data using a supported vault provider — PayGood currently integrates with [Basis Theory](https://basistheory.com). Basis Theory returns an opaque token ID that represents the underlying data.
+Raw card and bank account data never touches PayGood's servers. Before registering an instrument, you tokenize the sensitive data using a supported vault provider, which will return an opaque token ID that represents the underlying data.
 
 You then pass that token ID to PayGood via `POST /payment-instruments`. PayGood forwards it to the payment processor on your behalf during a charge. This architecture means your integration never handles raw PANs or routing numbers, keeping you out of PCI scope.
 
+## Collecting a payment instrument
+
+We provide two NPM packages you can integrate into your website to collect a card or bank account: `collect-core` (pure TypeScript component), or `collect-react` (React component).
+
+collect-core: [link](https://www.npmjs.com/package/@paygood1/collect-core) , collect-react: [link](https://www.npmjs.com/package/@paygood1/collect-react)
+
 <Info>
-  Contact your PayGood account team if you need to use a different vault provider. Basis Theory is the default supported provider.
+  Due to a temporary issue, initialize the component with `useStockDomain: false` . Once a fix is released, this will no longer be necessary and docs will be updated.
 </Info>
+
+Here's what the component looks like:
+
+<Frame>
+  ![Screenshot 2026 08 09 At 6 42 23 PM](/images/Screenshot-2026-08-09-at-6.42.23-PM.png "Screenshot 2026 08 09 At 6 42 23 PM")
+</Frame>
+
+See package docs for shape of result.
 
 ## Register a card instrument
 
@@ -26,7 +40,6 @@ curl -X POST https://api.paygood.co/payment-instruments \
   -H 'Content-Type: application/json' \
   -d '{
     "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
-    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
     "type": "card",
     "vaultToken": {
       "id": "tok_01hxy9n3prk9h4y4z4q1bar3ch",
@@ -63,11 +76,9 @@ curl -X POST https://api.paygood.co/payment-instruments \
   -H 'Content-Type: application/json' \
   -d '{
     "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
-    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
     "type": "bank_account",
     "vaultToken": {
       "id": "tok_01hxyc0u3vl9m9d9e9v6gft7il",
-      "provider": "basistheory"
     }
   }'
 ```
