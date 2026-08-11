@@ -45,7 +45,7 @@ This guide walks you through processing your first payment with PayGood. By the 
     ```
   </Step>
   <Step title="Register a payment instrument">
-    A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with our collect component first, then pass the resulting token to PayGood.
+    A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with our collect component first, then pass the resulting token to PayGood. Some server-side setup is required to initialize the component - see [core package](https://www.npmjs.com/package/@paygood1/collect-core) / [React package](https://www.npmjs.com/package/@paygood1/collect-react) docs
 
     ```bash
     curl -X POST https://api.paygood.co/payment-instruments \

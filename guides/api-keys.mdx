@@ -10,10 +10,10 @@ PayGood uses API keys — bearer tokens — to authenticate every request you ma
 
 <Steps>
   <Step title="Log in to the PayGood dashboard">
-    Go to [dashboard.paygood.co](https://dashboard.paygood.co) and sign in with your PayGood account credentials.
+    Go to [app.paygood.com](https://app.paygood.com) and sign in with your PayGood account credentials.
 
     <Note>
-      The dashboard URL differs by environment: use [dashboard-sandbox.paygood.co](https://dashboard-sandbox.paygood.co) for sandbox and [dashboard.paygood.co](https://dashboard.paygood.co) for production.
+      The dashboard URL differs by environment: use [app-sandbox.paygood.com](https://app-sandbox.paygood.com) for sandbox and [app.paygood.com](https://app.paygood.com) for production.
     </Note>
   </Step>
   <Step title="Navigate to Developers">
@@ -26,15 +26,6 @@ PayGood uses API keys — bearer tokens — to authenticate every request you ma
     Save the key in a secure location such as an environment variable or a secrets manager. Never paste it directly into your source code.
   </Step>
 </Steps>
-
-## Live keys vs. sandbox keys
-
-PayGood provides two types of API keys to keep your development and production environments separate:
-
-- **Live keys** — Used in your production environment. Requests made with a live key move real money.
-- **Sandbox keys** — Used during development and testing. No real funds are transferred, so you can safely experiment without affecting live transactions.
-
-You can identify which type of key you are using by the PayGood dashboard environment. Always use a sandbox key in your development and staging environments, and reserve your live key strictly for production traffic.
 
 ## Set your key as an environment variable
 

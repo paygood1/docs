@@ -33,8 +33,7 @@
           {
             "group": "Merchant Onboarding",
             "pages": [
-              "guides/merchant-onboarding-overview",
-              "guides/merchant-application"
+              "guides/merchant-onboarding-overview"
             ]
           }
         ]
