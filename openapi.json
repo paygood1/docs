@@ -1,264 +1,7 @@
 {
   "openapi": "3.0.0",
   "paths": {
-    "/health": {
-      "get": {
-        "operationId": "HealthController_health",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Service is up"
-          }
-        },
-        "summary": "Liveness check (no auth)",
-        "tags": [
-          "health"
-        ]
-      }
-    },
-    "/foundation/probes": {
-      "post": {
-        "operationId": "FoundationController_emit",
-        "parameters": [],
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/EmitProbeResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Emit a synthetic probe integration event",
-        "tags": [
-          "foundation"
-        ]
-      }
-    },
-    "/member-auth/otp/request": {
-      "post": {
-        "operationId": "MemberAuthController_requestOtpCode",
-        "parameters": [],
-        "responses": {
-          "202": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RequestOtpAcceptedResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Request a member one-time passcode",
-        "tags": [
-          "member-auth"
-        ]
-      }
-    },
-    "/member-auth/otp/verify": {
-      "post": {
-        "operationId": "MemberAuthController_verifyOtpCode",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "headers": {
-              "Set-Cookie": {
-                "description": "Sets httpOnly member session cookie (`pg_member=session_<prefix>_<secret>`).",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/VerifyOtpResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid OTP or email"
-          }
-        },
-        "summary": "Verify member one-time passcode",
-        "tags": [
-          "member-auth"
-        ]
-      }
-    },
-    "/member-auth/logout": {
-      "post": {
-        "operationId": "MemberAuthController_logout",
-        "parameters": [],
-        "responses": {
-          "204": {
-            "description": "Session revoked (if present) and cookie cleared.",
-            "headers": {
-              "Set-Cookie": {
-                "description": "Clears `pg_member` session cookie.",
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Logout current member session",
-        "tags": [
-          "member-auth"
-        ]
-      }
-    },
-    "/member-auth/me": {
-      "get": {
-        "operationId": "MemberAuthController_me",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MemberMeResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid member session"
-          }
-        },
-        "summary": "Get currently authenticated member",
-        "tags": [
-          "member-auth"
-        ]
-      }
-    },
-    "/diagnostics/probe-observations/{correlationId}": {
-      "get": {
-        "operationId": "DiagnosticsController_getProbeObservation",
-        "parameters": [
-          {
-            "name": "correlationId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProbeObservationResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Observation not found"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get probe observation by correlation ID",
-        "tags": [
-          "diagnostics"
-        ]
-      }
-    },
-    "/diagnostics/probe-traces/{correlationId}": {
-      "get": {
-        "operationId": "DiagnosticsController_getProbeTrace",
-        "parameters": [
-          {
-            "name": "correlationId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProbeTraceResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get probe hop trace by correlation ID",
-        "tags": [
-          "diagnostics"
-        ]
-      }
-    },
     "/payments": {
-      "post": {
-        "description": "Creates a one-time payment using a payment instrument and either an active price (`priceId`) or raw amount compatibility (`amount` + `currency`). Optional `description` and `metadata` are stored on the payment.",
-        "operationId": "PaymentsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "Payment creation payload.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePaymentDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PaymentResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a one-time payment",
-        "tags": [
-          "payments"
-        ]
-      },
       "get": {
         "description": "Returns payments sorted by newest first using cursor pagination. Use `page.nextCursor` as the next `cursor` value. Optional `start` and `end` filters bound `createdAt` inclusively.",
         "operationId": "PaymentsController_list",
@@ -335,74 +78,35 @@
         "tags": [
           "payments"
         ]
-      }
-    },
-    "/dashboard/payments": {
-      "get": {
-        "description": "Returns dashboard payment cards sorted by newest first using cursor pagination. Accepts either operator bearer auth or member session auth.",
-        "operationId": "DashboardPaymentsController_list",
-        "parameters": [
-          {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for payment `createdAt`. Must be >= `start` when both are provided.",
-            "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for payment `createdAt`.",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicG10XzAxLi4uIn19",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of items to return. Maximum 100. If omitted, server default is used.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope the dashboard list.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
+      },
+      "post": {
+        "description": "Creates a one-time payment using a payment instrument and either an active price (`priceId`) or raw amount compatibility (`amount` + `currency`). Optional `description` and `metadata` are stored on the payment.",
+        "operationId": "PaymentsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Payment creation payload.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentDto"
+              }
             }
           }
-        ],
+        },
         "responses": {
-          "200": {
+          "201": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListDashboardPaymentsResponseDto"
+                  "$ref": "#/components/schemas/CreatePaymentResponseDto"
                 }
               }
             }
+          },
+          "429": {
+            "description": "Too many requests — rate limit exceeded"
           }
         },
         "security": [
@@ -410,143 +114,9 @@
             "bearer": []
           }
         ],
-        "summary": "List payments for merchant dashboard",
+        "summary": "Create a one-time payment",
         "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/customers": {
-      "get": {
-        "operationId": "CustomerDashboardController_list",
-        "parameters": [
-          {
-            "name": "recentPaymentsLimit",
-            "required": false,
-            "in": "query",
-            "description": "Number of recent payments to include per customer. Maximum: 20.",
-            "schema": {
-              "example": 3,
-              "type": "number"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0IjoiMjAyNi0wMy0wMVQxMjowMDowMC4wMDBaIiwiY3VzdG9tZXJJZCI6ImN1c3RfMDEuLi4ifX0=",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of customers to return. Maximum 100. If omitted, server default is used.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope the dashboard list.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CustomerDashboardListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List dashboard customers for a merchant",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/customers/{merchantId}/{customerId}": {
-      "get": {
-        "operationId": "CustomerDashboardController_get",
-        "parameters": [
-          {
-            "name": "recentInvoicesLimit",
-            "required": false,
-            "in": "query",
-            "description": "Number of recent invoices to include in response. Defaults to 10. Maximum: 20.",
-            "schema": {
-              "example": 10,
-              "type": "number"
-            }
-          },
-          {
-            "name": "recentPaymentsLimit",
-            "required": false,
-            "in": "query",
-            "description": "Number of recent payments to include in response. Defaults to 10. Maximum: 20.",
-            "schema": {
-              "example": 10,
-              "type": "number"
-            }
-          },
-          {
-            "name": "customerId",
-            "required": true,
-            "in": "path",
-            "description": "Customer TypeID (`cust_...`) to fetch.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) to scope customer visibility.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardCustomerDetailResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get merchant-scoped customer detail with recent activity",
-        "tags": [
-          "dashboard"
+          "payments"
         ]
       }
     },
@@ -693,14 +263,55 @@
         ]
       }
     },
-    "/customers/{id}": {
+    "/merchants/{merchantId}/customers": {
       "get": {
-        "operationId": "CustomersController_get",
+        "operationId": "MerchantCustomersController_list",
         "parameters": [
           {
-            "name": "id",
+            "name": "hasPayments",
+            "required": false,
+            "in": "query",
+            "description": "When true, return only customers with payments for this merchant. When false, return only customers without payments.",
+            "schema": {
+              "example": true,
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "q",
+            "required": false,
+            "in": "query",
+            "description": "Case-insensitive search across customer name and email.",
+            "schema": {
+              "example": "amina",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor returned from a previous page response.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0Ijoi...In19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Max number of customers to return (default service limit).",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
             "required": true,
             "in": "path",
+            "description": "Merchant TypeID (`mer_...`) for customer visibility scope.",
             "schema": {
               "type": "string"
             }
@@ -712,7 +323,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CustomerResponseDto"
+                  "$ref": "#/components/schemas/MerchantCustomerListResponseDto"
                 }
               }
             }
@@ -723,13 +334,11 @@
             "bearer": []
           }
         ],
-        "summary": "Get a customer by id",
+        "summary": "List customers linked to a merchant",
         "tags": [
           "customers"
         ]
-      }
-    },
-    "/merchants/{merchantId}/customers": {
+      },
       "post": {
         "operationId": "MerchantCustomersController_create",
         "parameters": [
@@ -880,223 +489,56 @@
         "tags": [
           "customers"
         ]
-      },
-      "get": {
-        "operationId": "MerchantCustomersController_list",
-        "parameters": [
-          {
-            "name": "hasPayments",
-            "required": false,
-            "in": "query",
-            "description": "When true, return only customers with payments for this merchant. When false, return only customers without payments.",
-            "schema": {
-              "example": true,
-              "type": "boolean"
-            }
-          },
-          {
-            "name": "q",
-            "required": false,
-            "in": "query",
-            "description": "Case-insensitive search across customer name and email.",
-            "schema": {
-              "example": "amina",
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor returned from a previous page response.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImZpcnN0U2VlbkF0Ijoi...In19",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Max number of customers to return (default service limit).",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) for customer visibility scope.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MerchantCustomerListResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List customers linked to a merchant",
-        "tags": [
-          "customers"
-        ]
       }
     },
-    "/tokenization/cards/{tokenId}/display": {
-      "get": {
-        "operationId": "TokenizationController_getCardDisplay",
-        "parameters": [
-          {
-            "name": "tokenId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CardDisplayResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Vault token not found or not a card token"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get masked card display details for a vault token",
-        "tags": [
-          "tokenization"
-        ]
-      }
-    },
-    "/tokenization/bank-accounts/{tokenId}/display": {
-      "get": {
-        "operationId": "BankAccountTokenizationController_getBankAccountDisplay",
-        "parameters": [
-          {
-            "name": "tokenId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BankAccountDisplayResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Vault token not found or not a bank account token"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get masked bank account display details for a vault token",
-        "tags": [
-          "tokenization"
-        ]
-      }
-    },
-    "/tokenization/tax-identifiers/{tokenId}/display": {
-      "get": {
-        "operationId": "TaxIdentifierTokenizationController_getTaxIdentifierDisplay",
-        "parameters": [
-          {
-            "name": "tokenId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TaxIdentifierDisplayResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Vault token not found or not a tax identifier token"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get masked tax identifier display details for a vault token",
-        "tags": [
-          "tokenization"
-        ]
-      }
-    },
-    "/tokenization/sessions": {
+    "/tokenization/intents": {
       "post": {
-        "operationId": "BasisTheorySessionController_create",
+        "description": "Server-side only. Returns a short-lived bearer token (`tokintent_...`) the browser passes to `POST /tokenization/sessions` instead of a checkout session token. Requires a merchant↔customer link.",
+        "operationId": "TokenizationIntentsController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Customer to tokenize a payment instrument for.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTokenizationIntentDto"
+              },
+              "examples": {
+                "embedSaveCard": {
+                  "summary": "Save-card embed flow",
+                  "value": {
+                    "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
-            "description": "",
+            "description": "Intent minted. Pass `token` as the Bearer token on `POST /tokenization/sessions`.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BasisTheorySessionResponseDto"
+                  "$ref": "#/components/schemas/CreateTokenizationIntentResponseDto"
                 }
               }
             }
           },
-          "502": {
-            "description": "Basis Theory rejected the session request"
+          "401": {
+            "description": "Missing or invalid merchant API key or member session."
           },
-          "503": {
-            "description": "Basis Theory is unavailable"
+          "404": {
+            "description": "Customer is not linked to the authenticated merchant."
           }
         },
-        "summary": "Create an authorized Basis Theory session for client-side tokenization",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Mint a tokenization intent for client-side Basis Theory sessions",
         "tags": [
           "tokenization"
         ]
@@ -1104,8 +546,33 @@
     },
     "/payment-instruments": {
       "post": {
+        "description": "Accepts a Basis Theory vault token id only (`vaultToken.id`). Do not send a vault provider field.",
         "operationId": "PaymentInstrumentsController_create",
         "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Payment instrument registration payload. `vaultToken` is `{ id }` only; Basis Theory is inferred server-side.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePaymentInstrumentDto"
+              },
+              "examples": {
+                "registerCard": {
+                  "summary": "Register a card instrument",
+                  "value": {
+                    "vaultToken": {
+                      "id": "bt_card_token_abc123"
+                    },
+                    "instrumentHolderName": "Amina Diallo",
+                    "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+                    "idempotencyKey": "idem-pi-01"
+                  }
+                }
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "",
@@ -1130,43 +597,6 @@
       }
     },
     "/catalog/products": {
-      "post": {
-        "description": "Creates a merchant-scoped catalog product. Requires idempotency key and merchant scope.",
-        "operationId": "CatalogProductsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "Create payload with idempotency key and merchant-scoped product details.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateProductDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a catalog product",
-        "tags": [
-          "catalog-products"
-        ]
-      },
       "get": {
         "description": "Returns catalog products sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively. Requires `catalog.manage` capability for the scoped merchant.",
         "operationId": "CatalogProductsController_list",
@@ -1249,6 +679,43 @@
           }
         ],
         "summary": "List catalog products for a merchant",
+        "tags": [
+          "catalog-products"
+        ]
+      },
+      "post": {
+        "description": "Creates a merchant-scoped catalog product. Requires idempotency key and merchant scope.",
+        "operationId": "CatalogProductsController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key and merchant-scoped product details.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a catalog product",
         "tags": [
           "catalog-products"
         ]
@@ -1504,43 +971,6 @@
       }
     },
     "/catalog/prices": {
-      "post": {
-        "description": "Creates a merchant-scoped price that is either one-time or recurring.",
-        "operationId": "CatalogPricesController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "Create payload with idempotency key, merchant scope, money fields, and optional product link.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreatePriceDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PriceResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a catalog price",
-        "tags": [
-          "catalog-prices"
-        ]
-      },
       "get": {
         "description": "Returns catalog prices sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively.",
         "operationId": "CatalogPricesController_list",
@@ -1614,6 +1044,43 @@
           }
         ],
         "summary": "List catalog prices for a merchant",
+        "tags": [
+          "catalog-prices"
+        ]
+      },
+      "post": {
+        "description": "Creates a merchant-scoped price that is either one-time or recurring.",
+        "operationId": "CatalogPricesController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "description": "Create payload with idempotency key, merchant scope, money fields, and optional product link.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreatePriceDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Create a catalog price",
         "tags": [
           "catalog-prices"
         ]
@@ -1716,6 +1183,102 @@
       }
     },
     "/invoices": {
+      "get": {
+        "description": "Returns invoices sorted by newest first using cursor pagination. Supports optional customer and created-at range filtering.",
+        "operationId": "InvoicesController_list",
+        "parameters": [
+          {
+            "name": "end",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 upper bound for invoice `createdAt`. Must be >= `start` when both are provided.",
+            "schema": {
+              "example": "2026-03-31T23:59:59.999Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "start",
+            "required": false,
+            "in": "query",
+            "description": "Inclusive ISO-8601 lower bound for invoice `createdAt`.",
+            "schema": {
+              "example": "2026-03-01T00:00:00.000Z",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoiaW52XzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "customerId",
+            "required": false,
+            "in": "query",
+            "description": "Optional customer TypeID (`cust_...`) filter.",
+            "schema": {
+              "example": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) to scope invoice listing.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of invoices. Each item contains invoice number, status, and computed totals.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListInvoicesResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query parameters or malformed cursor token."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List invoices for a merchant",
+        "tags": [
+          "invoices"
+        ]
+      },
       "post": {
         "description": "Creates a merchant-scoped draft invoice with a sequential merchant invoice number. Line items may mix catalog product charges and manual adjustments such as merchant-calculated tax or shipping.",
         "operationId": "InvoicesController_create",
@@ -1827,58 +1390,20 @@
         "tags": [
           "invoices"
         ]
-      },
+      }
+    },
+    "/invoices/{id}": {
       "get": {
-        "description": "Returns invoices sorted by newest first using cursor pagination. Supports optional customer and created-at range filtering.",
-        "operationId": "InvoicesController_list",
+        "description": "Returns a single merchant-scoped invoice by its TypeID, including invoice number, line items, and computed totals.",
+        "operationId": "InvoicesController_get",
         "parameters": [
           {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for invoice `createdAt`. Must be >= `start` when both are provided.",
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to fetch.",
             "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for invoice `createdAt`.",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoiaW52XzAxLi4uIn19",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of items to return. Maximum 100.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "customerId",
-            "required": false,
-            "in": "query",
-            "description": "Optional customer TypeID (`cust_...`) filter.",
-            "schema": {
-              "example": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
             }
           },
@@ -1886,7 +1411,7 @@
             "name": "merchantId",
             "required": true,
             "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope invoice listing.",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
             "schema": {
               "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
               "type": "string"
@@ -1895,23 +1420,26 @@
         ],
         "responses": {
           "200": {
-            "description": "Paginated list of invoices. Each item contains invoice number, status, and computed totals.",
+            "description": "Invoice found.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListInvoicesResponseDto"
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid query parameters or malformed cursor token."
+            "description": "Validation failed for invoice id or merchant id."
           },
           "401": {
             "description": "Missing or invalid authentication credentials."
           },
           "403": {
             "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
           }
         },
         "security": [
@@ -1919,13 +1447,11 @@
             "bearer": []
           }
         ],
-        "summary": "List invoices for a merchant",
+        "summary": "Get invoice by id",
         "tags": [
           "invoices"
         ]
-      }
-    },
-    "/invoices/{id}": {
+      },
       "put": {
         "description": "Updates draft invoice contents while keeping the same invoice id and URL slug. Each successful update appends an invoice revision entry.",
         "operationId": "InvoicesController_update",
@@ -2007,147 +1533,9 @@
         "tags": [
           "invoices"
         ]
-      },
-      "get": {
-        "description": "Returns a single merchant-scoped invoice by its TypeID, including invoice number, line items, and computed totals.",
-        "operationId": "InvoicesController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Invoice TypeID (`inv_...`) to fetch.",
-            "schema": {
-              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Invoice found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvoiceResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed for invoice id or merchant id."
-          },
-          "401": {
-            "description": "Missing or invalid authentication credentials."
-          },
-          "403": {
-            "description": "Authenticated principal lacks `invoices.view` capability or merchant scope."
-          },
-          "404": {
-            "description": "Invoice was not found for the provided merchant scope."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get invoice by id",
-        "tags": [
-          "invoices"
-        ]
       }
     },
     "/invoices/{id}/payments": {
-      "post": {
-        "description": "Charges a payment instrument for all or part of the remaining balance. The returned allocation is `pending`: the invoice balance does not move until the processor reports a capture, so `amountPaid` and `status` in this response still reflect the pre-charge state. Idempotent by idempotency key per invoice — a replay returns the existing allocation without charging again.",
-        "operationId": "InvoicesController_charge",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Invoice TypeID (`inv_...`) to charge.",
-            "schema": {
-              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Charge payload with idempotency key, merchant scope, payment instrument, and optional partial amount.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ChargeInvoiceDto"
-              },
-              "examples": {
-                "chargeFullBalance": {
-                  "summary": "Charge the full remaining balance",
-                  "value": {
-                    "idempotencyKey": "idem-inv-charge-01",
-                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-                    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1"
-                  }
-                },
-                "chargePartialAmount": {
-                  "summary": "Charge a partial amount",
-                  "value": {
-                    "idempotencyKey": "idem-inv-charge-02",
-                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-                    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1",
-                    "amount": 20000
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Charge accepted. Returns the invoice plus the newly created `pending` allocation.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InvoicePaymentResultDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed, invoice is not `issued` or `partially_paid`, amount exceeds the remaining balance, or the payment instrument is inactive or belongs to another customer."
-          },
-          "401": {
-            "description": "Missing or invalid authentication credentials."
-          },
-          "403": {
-            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
-          },
-          "404": {
-            "description": "Invoice was not found for the provided merchant scope, or the payment instrument does not exist."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Charge a payment instrument against an invoice",
-        "tags": [
-          "invoices"
-        ]
-      },
       "get": {
         "description": "Returns both processed and out-of-band payments for one invoice, newest first, using cursor pagination. Every row exposes `effectiveAt`; out-of-band rows additionally expose `method`, `reference`, and `recordedBy` so the dashboard can render payment history without a second lookup.",
         "operationId": "InvoicesController_listPayments",
@@ -2223,6 +1611,85 @@
           }
         ],
         "summary": "List payments applied to an invoice",
+        "tags": [
+          "invoices"
+        ]
+      },
+      "post": {
+        "description": "Charges a payment instrument for all or part of the remaining balance. The returned allocation is `pending`: the invoice balance does not move until the processor reports a capture, so `amountPaid` and `status` in this response still reflect the pre-charge state. Idempotent by idempotency key per invoice — a replay returns the existing allocation without charging again.",
+        "operationId": "InvoicesController_charge",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to charge.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Charge payload with idempotency key, merchant scope, payment instrument, and optional partial amount.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChargeInvoiceDto"
+              },
+              "examples": {
+                "chargeFullBalance": {
+                  "summary": "Charge the full remaining balance",
+                  "value": {
+                    "idempotencyKey": "idem-inv-charge-01",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1"
+                  }
+                },
+                "chargePartialAmount": {
+                  "summary": "Charge a partial amount",
+                  "value": {
+                    "idempotencyKey": "idem-inv-charge-02",
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1",
+                    "amount": 20000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Charge accepted. Returns the invoice plus the newly created `pending` allocation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoicePaymentResultDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, invoice is not `issued` or `partially_paid`, amount exceeds the remaining balance, or the payment instrument is inactive or belongs to another customer."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope, or the payment instrument does not exist."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Charge a payment instrument against an invoice",
         "tags": [
           "invoices"
         ]
@@ -2636,1820 +2103,6 @@
         ]
       }
     },
-    "/checkout/sessions": {
-      "post": {
-        "description": "Resolves an invoice by its public URL slug and returns a short-lived bearer token plus an anonymous payable projection. Returns 404 when the slug is unknown or the invoice is not payable.",
-        "operationId": "CheckoutSessionsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "Invoice pay-link slug from the customer-facing URL.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCheckoutSessionDto"
-              },
-              "examples": {
-                "mintSession": {
-                  "summary": "Mint a session",
-                  "value": {
-                    "slug": "Kq7Zx3nP9tRv2wYbLmN4cUd1"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Checkout session minted. Store the token client-side and send it as a Bearer token on subsequent requests.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateCheckoutSessionResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Slug did not resolve to a payable invoice. Deliberately uniform for unknown, draft, void, and paid invoices."
-          }
-        },
-        "summary": "Mint a checkout session for an invoice pay link",
-        "tags": [
-          "checkout"
-        ]
-      }
-    },
-    "/checkout/sessions/{id}": {
-      "get": {
-        "description": "Returns the current session status and a fresh payable invoice projection for the page to re-render after a refresh.",
-        "operationId": "CheckoutSessionsController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Checkout session TypeID (`chks_...`).",
-            "schema": {
-              "example": "chks_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Checkout session state and payable projection.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetCheckoutSessionResponseDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing, invalid, or expired checkout session token."
-          },
-          "404": {
-            "description": "Session id does not match the authenticated session."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Read checkout session state",
-        "tags": [
-          "checkout"
-        ]
-      }
-    },
-    "/checkout/sessions/{id}/payments": {
-      "post": {
-        "description": "Registers a payment instrument from a Basis Theory vault token and charges the invoice behind the checkout session. The browser must never send customer, merchant, or payment-instrument ids.",
-        "operationId": "CheckoutSessionsController_pay",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Checkout session TypeID (`chks_...`).",
-            "schema": {
-              "example": "chks_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Payment payload with idempotency key and a new-card payment method.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateCheckoutSessionPaymentDto"
-              },
-              "examples": {
-                "payFullBalance": {
-                  "summary": "Pay the full remaining balance",
-                  "value": {
-                    "idempotencyKey": "checkout-pay-01",
-                    "paymentMethod": {
-                      "type": "new_card",
-                      "vaultToken": {
-                        "id": "bt_token_abc123",
-                        "provider": "basistheory"
-                      },
-                      "instrumentHolderName": "Amina Diallo"
-                    }
-                  }
-                },
-                "payPartialAmount": {
-                  "summary": "Pay a partial amount",
-                  "value": {
-                    "idempotencyKey": "checkout-pay-02",
-                    "paymentMethod": {
-                      "type": "new_card",
-                      "vaultToken": {
-                        "id": "bt_token_abc123",
-                        "provider": "basistheory"
-                      },
-                      "instrumentHolderName": "Amina Diallo"
-                    },
-                    "amount": 20000
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Charge accepted. Allocation is pending until the processor reports capture.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateCheckoutSessionPaymentResponseDto"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed or the requested amount exceeds the remaining balance."
-          },
-          "401": {
-            "description": "Missing, invalid, or expired checkout session token, or attempt cap exceeded."
-          },
-          "404": {
-            "description": "Session id does not match the authenticated session."
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Pay an invoice from checkout",
-        "tags": [
-          "checkout"
-        ]
-      }
-    },
-    "/payouts": {
-      "get": {
-        "description": "Returns payout transfer movements to a merchant bank account sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively.",
-        "operationId": "PayoutsController_list",
-        "parameters": [
-          {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for payout `createdAt`.",
-            "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for payout `createdAt`.",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicGF5b3V0XzAxLi4uIn19",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of items to return. Maximum 100.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope the list.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListPayoutsResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List payouts for a merchant",
-        "tags": [
-          "payouts"
-        ]
-      }
-    },
-    "/payouts/{id}": {
-      "get": {
-        "description": "Returns a single payout transfer movement by id scoped to a merchant.",
-        "operationId": "PayoutsController_getById",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) used for authorization scope.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          },
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "description": "Payout TypeID (`payout_...`) to fetch.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PayoutResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get payout details",
-        "tags": [
-          "payouts"
-        ]
-      }
-    },
-    "/dashboard/payouts": {
-      "get": {
-        "description": "Returns dashboard payout transfer movements sorted by newest first using cursor pagination. Uses the same listing logic as `GET /payouts`.",
-        "operationId": "DashboardPayoutsController_list",
-        "parameters": [
-          {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for payout `createdAt`.",
-            "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for payout `createdAt`.",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoicGF5b3V0XzAxLi4uIn19",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of items to return. Maximum 100.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope the list.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListDashboardPayoutsResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List payouts for merchant dashboard",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/payouts/settlement-batches": {
-      "get": {
-        "description": "Returns settlement batch economics sorted by newest first using cursor pagination.",
-        "operationId": "DashboardPayoutsController_listSettlementBatchesDashboard",
-        "parameters": [
-          {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for settlement provider-created time (`periodStart`).",
-            "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for settlement provider-created time (`periodStart`).",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque cursor from a previous `page.nextCursor`.",
-            "schema": {
-              "example": "eyJ2IjoxLCJkYXRhIjp7ImNyZWF0ZWRBdCI6IjIwMjYtMDMtMDFUMTI6MDA6MDAuMDAwWiIsImlkIjoic2V0YmF0Y2hfMDEuLi4ifX0=",
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Number of items to return. Maximum 100.",
-            "schema": {
-              "example": 25,
-              "type": "number"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope the list.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListSettlementBatchesResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List settlement batches for merchant dashboard",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/payouts/settlement-batches/summary": {
-      "get": {
-        "description": "Returns merchant settlement batch totals (volume, fees, net) for an optional date window.",
-        "operationId": "DashboardPayoutsController_getSettlementBatchesSummary",
-        "parameters": [
-          {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for settlement provider-created time (`periodStart`).",
-            "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for settlement provider-created time (`periodStart`).",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope summary metrics.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SettlementBatchSummaryResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get settlement batch summary metrics",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/payouts/overview": {
-      "get": {
-        "description": "Returns payout transfer totals and settlement batch totals for the same merchant/date window.",
-        "operationId": "DashboardPayoutsController_getOverview",
-        "parameters": [
-          {
-            "name": "end",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 upper bound for `createdAt` filters.",
-            "schema": {
-              "example": "2026-03-31T23:59:59.999Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "start",
-            "required": false,
-            "in": "query",
-            "description": "Inclusive ISO-8601 lower bound for `createdAt` filters.",
-            "schema": {
-              "example": "2026-03-01T00:00:00.000Z",
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) to scope overview metrics.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PayoutsDashboardOverviewResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get payouts and settlement batch dashboard overview",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/merchant-applications": {
-      "post": {
-        "operationId": "MerchantApplicationsController_create",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "description": "Create payload with idempotency key, ISO-3166-1 alpha-2 country code (country), and optional parentMerchantId.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMerchantApplicationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a draft merchant application",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}": {
-      "get": {
-        "operationId": "MerchantApplicationsController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get a merchant application",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/business-profile": {
-      "patch": {
-        "description": "Replaces the full business profile payload for the merchant application.",
-        "operationId": "MerchantApplicationsController_patchBusinessProfile",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Business profile patch payload with idempotency key and businessProfile object.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchBusinessProfileDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update merchant application business profile",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/beneficial-owners": {
-      "patch": {
-        "description": "Replaces all beneficial owners for the application. Beneficial owner IDs are generated by the backend.",
-        "operationId": "MerchantApplicationsController_patchBeneficialOwners",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Beneficial owners patch payload with idempotency key and owner list.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchBeneficialOwnersDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Replace merchant application beneficial owners",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/payout-accounts": {
-      "patch": {
-        "description": "Replaces all payout accounts for the application in a single idempotent request. Payout account IDs are generated by the backend.",
-        "operationId": "MerchantApplicationsController_patchPayoutAccounts",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Payout accounts patch payload with idempotency key and payoutAccounts array.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchPayoutAccountsDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Replace merchant application payout accounts",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/underwriting": {
-      "patch": {
-        "description": "Replaces underwriting data fields for the merchant application.",
-        "operationId": "MerchantApplicationsController_patchUnderwriting",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Underwriting patch payload with idempotency key and underwritingData object.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatchUnderwritingDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Update merchant application underwriting data",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/processor-consents/{processor}": {
-      "put": {
-        "operationId": "MerchantApplicationsController_putProcessorConsent",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "processor",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Record processor onboarding consent",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/submit": {
-      "post": {
-        "operationId": "MerchantApplicationsController_submit",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Submit merchant application for processor review",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/request-amendments": {
-      "post": {
-        "operationId": "MerchantApplicationsController_requestAmendmentsEndpoint",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Request amendments on a merchant application",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/approve": {
-      "post": {
-        "operationId": "MerchantApplicationsController_approve",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Approve merchant application and materialize merchant",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/fee-profile-override": {
-      "put": {
-        "description": "Sets a Finix fee profile override or clears it by sending null.",
-        "operationId": "MerchantApplicationsController_putFeeProfileOverride",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Fee profile override payload with idempotency key and optional feeProfileId.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SetFeeProfileOverrideDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Manually set or clear fee profile override for custom pricing applications",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/merchant-applications/{id}/refresh-onboarding-state": {
-      "post": {
-        "operationId": "MerchantApplicationsController_refreshMerchantOnboardingState",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "201": {
-            "description": ""
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Manually refresh Finix onboarding state for this application merchant",
-        "tags": [
-          "merchant-applications"
-        ]
-      }
-    },
-    "/member/merchant-applications": {
-      "get": {
-        "operationId": "MemberMerchantApplicationsController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "List merchant applications with an existing member grant for current session member",
-        "tags": [
-          "member-merchant-applications"
-        ]
-      }
-    },
-    "/member/merchant-applications/{id}": {
-      "get": {
-        "operationId": "MemberMerchantApplicationsController_get",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Get a merchant application as member",
-        "tags": [
-          "member-merchant-applications"
-        ]
-      }
-    },
-    "/member/merchant-applications/{id}/underwriting": {
-      "patch": {
-        "operationId": "MemberMerchantApplicationsController_patchUnderwriting",
-        "parameters": [
-          {
-            "name": "id",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "summary": "Update merchant application underwriting as member",
-        "tags": [
-          "member-merchant-applications"
-        ]
-      }
-    },
-    "/member/merchants": {
-      "get": {
-        "description": "Returns an array where each element is a merchant record. The merchant ID is in `merchantId` on each array item.",
-        "operationId": "MemberMerchantsController_list",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Member-accessible merchants. `merchantId` is nested on each object in the response array.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "required": [
-                      "merchantId",
-                      "parentMerchantId",
-                      "country",
-                      "status",
-                      "legalName",
-                      "doingBusinessAs",
-                      "createdAt",
-                      "onboardedAt",
-                      "memberRole",
-                      "grantedAt"
-                    ],
-                    "properties": {
-                      "merchantId": {
-                        "type": "string",
-                        "description": "Merchant TypeID for this array item (format: mer_...).",
-                        "example": "mer_01j0memberlist"
-                      },
-                      "parentMerchantId": {
-                        "type": "string",
-                        "nullable": true,
-                        "description": "Parent merchant TypeID when this merchant is a child.",
-                        "example": null
-                      },
-                      "country": {
-                        "type": "string",
-                        "example": "US"
-                      },
-                      "status": {
-                        "type": "string",
-                        "example": "active"
-                      },
-                      "legalName": {
-                        "type": "string",
-                        "description": "Merchant legal business name.",
-                        "example": "Diallo Foods LLC"
-                      },
-                      "doingBusinessAs": {
-                        "type": "string",
-                        "nullable": true,
-                        "description": "Merchant DBA/trade name when provided.",
-                        "example": "Diallo Foods"
-                      },
-                      "createdAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2026-07-16T12:00:00.000Z"
-                      },
-                      "onboardedAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true,
-                        "example": "2026-07-16T12:10:00.000Z"
-                      },
-                      "memberRole": {
-                        "type": "string",
-                        "example": "admin"
-                      },
-                      "grantedAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "example": "2026-07-16T12:05:00.000Z"
-                      }
-                    }
-                  },
-                  "example": [
-                    {
-                      "merchantId": "mer_01j0memberlist",
-                      "parentMerchantId": null,
-                      "country": "US",
-                      "status": "active",
-                      "legalName": "Diallo Foods LLC",
-                      "doingBusinessAs": "Diallo Foods",
-                      "createdAt": "2026-07-16T12:00:00.000Z",
-                      "onboardedAt": "2026-07-16T12:10:00.000Z",
-                      "memberRole": "admin",
-                      "grantedAt": "2026-07-16T12:05:00.000Z"
-                    }
-                  ]
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid member session cookie."
-          }
-        },
-        "summary": "List merchants with an existing member grant for current session member",
-        "tags": [
-          "member-merchants"
-        ]
-      }
-    },
-    "/dashboard/merchants/home/summary-metrics": {
-      "get": {
-        "operationId": "MerchantDashboardController_getSummary",
-        "parameters": [
-          {
-            "name": "calendarMode",
-            "required": false,
-            "in": "query",
-            "description": "Optional query parameter. Defaults to gregorian when omitted.",
-            "schema": {
-              "enum": [
-                "gregorian",
-                "hijri"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "to",
-            "required": true,
-            "in": "query",
-            "description": "End of selected window as ISO 8601 timestamp query parameter and must be later than from.",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "from",
-            "required": true,
-            "in": "query",
-            "description": "Start of selected window as ISO 8601 timestamp query parameter (e.g. 2026-07-01T00:00:00.000Z).",
-            "schema": {
-              "format": "date-time",
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID passed as a query parameter (format: mer_...).",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MerchantDashboardSummaryMetricsResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "Get merchant dashboard home summary metrics for a selected window",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/merchants/api-keys": {
-      "get": {
-        "description": "Returns dashboard-safe API key metadata for the selected merchant.",
-        "operationId": "MerchantDashboardApiKeysController_list",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID passed as query parameter (format: mer_...).",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MerchantDashboardApiKeysResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "List merchant dashboard API keys",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/dashboard/payout-accounts": {
-      "get": {
-        "description": "Returns the current payout account for a merchant, if one exists. Supports operator bearer auth and member session auth.",
-        "operationId": "PayoutAccountsDashboardController_getCurrent",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Merchant TypeID (`mer_...`) used to scope payout account visibility.",
-            "schema": {
-              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetDashboardPayoutAccountResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Get current payout account for merchant dashboard",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/merchants/{merchantId}/api-keys": {
-      "get": {
-        "operationId": "MerchantApiKeysController_list",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) owning the API keys.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListMerchantApiKeysResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List API keys for a merchant",
-        "tags": [
-          "merchant-api-keys"
-        ]
-      },
-      "post": {
-        "description": "Creates a new API key for the merchant. The plaintext key is returned only once in this response.",
-        "operationId": "MerchantApiKeysController_create",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) owning the API key.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Create payload with idempotency key, required label, optional environment (defaults to test), and access mode.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMerchantApiKeyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateMerchantApiKeyResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Create a merchant API key",
-        "tags": [
-          "merchant-api-keys"
-        ]
-      }
-    },
-    "/merchants/{merchantId}/api-keys/{apiKeyId}/revoke": {
-      "post": {
-        "operationId": "MerchantApiKeysController_revoke",
-        "parameters": [
-          {
-            "name": "apiKeyId",
-            "required": true,
-            "in": "path",
-            "description": "API key TypeID (`apikey_...`) to revoke.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) owning the API key.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Revoke payload with idempotency key.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RevokeMerchantApiKeyDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RevokeMerchantApiKeyResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revoke a merchant API key",
-        "tags": [
-          "merchant-api-keys"
-        ]
-      }
-    },
-    "/merchants/{merchantId}/invitations": {
-      "post": {
-        "operationId": "MerchantInvitationsController_create",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) receiving the invitation.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Invite payload with idempotency key, email, optional name, and role (`admin` or `viewer`).",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateMerchantInvitationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateMerchantInvitationResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Invite a member to manage a merchant dashboard",
-        "tags": [
-          "merchant-invitations"
-        ]
-      },
-      "get": {
-        "operationId": "MerchantInvitationsController_list",
-        "parameters": [
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque pagination cursor from a previous response.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Maximum invitations to return (default 20, max 100).",
-            "schema": {
-              "example": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "description": "Optional invitation status filter.",
-            "schema": {
-              "enum": [
-                "pending",
-                "accepted",
-                "revoked"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) whose invitations are listed.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListMerchantInvitationsResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List merchant team invitations",
-        "tags": [
-          "merchant-invitations"
-        ]
-      }
-    },
-    "/merchants/{merchantId}/invitations/{invitationId}/revoke": {
-      "post": {
-        "operationId": "MerchantInvitationsController_revoke",
-        "parameters": [
-          {
-            "name": "invitationId",
-            "required": true,
-            "in": "path",
-            "description": "Invitation TypeID (`merinv_...`) to revoke.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) owning the invitation.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "description": "Revoke payload with idempotency key.",
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RevokeMerchantInvitationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MerchantInvitationResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "Revoke a pending merchant team invitation",
-        "tags": [
-          "merchant-invitations"
-        ]
-      }
-    },
-    "/merchants/{merchantId}/members": {
-      "get": {
-        "operationId": "MerchantMembersController_list",
-        "parameters": [
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "path",
-            "description": "Merchant TypeID (`mer_...`) whose team roster is listed.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListMerchantMembersResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ],
-        "summary": "List members with access to a merchant dashboard",
-        "tags": [
-          "merchant-members"
-        ]
-      }
-    },
-    "/member/merchant-invitations/preview": {
-      "post": {
-        "operationId": "MemberMerchantInvitationsController_preview",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PreviewMerchantInvitationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PreviewMerchantInvitationResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Invalid invitation token"
-          },
-          "410": {
-            "description": "Invitation expired"
-          }
-        },
-        "summary": "Preview a merchant team invitation from its token",
-        "tags": [
-          "member-merchant-invitations"
-        ]
-      }
-    },
-    "/member/merchant-invitations/accept": {
-      "post": {
-        "operationId": "MemberMerchantInvitationsController_accept",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/AcceptMerchantInvitationDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MerchantInvitationResponseDto"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Signed-in email mismatch"
-          },
-          "404": {
-            "description": "Invalid invitation token"
-          },
-          "409": {
-            "description": "Member already has access"
-          },
-          "410": {
-            "description": "Invitation expired"
-          }
-        },
-        "summary": "Accept a merchant team invitation",
-        "tags": [
-          "member-merchant-invitations"
-        ]
-      }
-    },
-    "/referrals/preview": {
-      "post": {
-        "operationId": "MemberMerchantReferralsController_preview",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PreviewMerchantReferralDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PreviewMerchantReferralResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Invalid referral code"
-          }
-        },
-        "summary": "Preview a merchant referral code before signup",
-        "tags": [
-          "member-merchant-referrals"
-        ]
-      }
-    },
-    "/member/referrals/claim": {
-      "post": {
-        "operationId": "MemberMerchantReferralsController_claim",
-        "parameters": [],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ClaimMerchantReferralDto"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MerchantReferralResponseDto"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Invalid referral code"
-          },
-          "409": {
-            "description": "Self-referral or conflict"
-          }
-        },
-        "summary": "Claim a merchant referral after member signup",
-        "tags": [
-          "member-merchant-referrals"
-        ]
-      }
-    },
     "/merchants/{merchantId}/referrals": {
       "get": {
         "operationId": "MerchantReferralsController_list",
@@ -4555,126 +2208,14 @@
           "merchant-referrals"
         ]
       }
-    },
-    "/dashboard/merchants/referrals": {
-      "get": {
-        "operationId": "MerchantDashboardReferralsController_list",
-        "parameters": [
-          {
-            "name": "cursor",
-            "required": false,
-            "in": "query",
-            "description": "Opaque pagination cursor from a previous response.",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "limit",
-            "required": false,
-            "in": "query",
-            "description": "Maximum referrals to return (default 20, max 100).",
-            "schema": {
-              "example": 20,
-              "type": "number"
-            }
-          },
-          {
-            "name": "status",
-            "required": false,
-            "in": "query",
-            "description": "Optional referral status filter.",
-            "schema": {
-              "enum": [
-                "pending",
-                "completed"
-              ],
-              "type": "string"
-            }
-          },
-          {
-            "name": "merchantId",
-            "required": true,
-            "in": "query",
-            "description": "Referring merchant TypeID (`mer_...`).",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ListMerchantReferralsResponseDto"
-                }
-              }
-            }
-          }
-        },
-        "summary": "List referrals for the current merchant dashboard context",
-        "tags": [
-          "dashboard"
-        ]
-      }
-    },
-    "/member/reference/mccs": {
-      "get": {
-        "description": "Returns the allowlist of merchant category codes (MCCs) for the signup business profile dropdown.\n\n**Authentication:** Requires an authenticated member session. Send the `pg_member` httpOnly cookie obtained from `POST /member-auth/otp/verify`. Requests without a valid session receive `401 Unauthorized`.\n\n**Signup flow:**\n1. Authenticate the merchant via member OTP (`POST /member-auth/otp/request`, then `POST /member-auth/otp/verify`).\n2. Call this endpoint to populate the MCC dropdown.\n3. When saving the business profile, submit the selected entry's `code` as `businessProfile.mcc` on `PATCH /merchant-applications/:id/business-profile`. Only codes returned by this endpoint are accepted.\n\n**Response shape:** JSON array ordered for display. Each item has `code` (wire value) and `displayName` (UI label).",
-        "operationId": "MemberReferenceController_listMccs",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Supported merchant category codes for onboarding. Use `code` when patching the merchant application business profile.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SupportedMccCodeResponseDto"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid member session. Authenticate via `POST /member-auth/otp/verify` and include the `pg_member` session cookie on the request."
-          }
-        },
-        "summary": "List supported merchant category codes for onboarding",
-        "tags": [
-          "member-reference"
-        ]
-      }
-    },
-    "/webhooks/finix": {
-      "post": {
-        "operationId": "FinixWebhooksController_receive",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "Registration probe accepted"
-          },
-          "204": {
-            "description": "Webhook accepted"
-          }
-        },
-        "summary": "Receive Finix webhook event",
-        "tags": [
-          "webhooks"
-        ]
-      }
     }
   },
   "info": {
-    "title": "PayGood API",
-    "description": "",
+    "title": "PayGood Merchant API",
+    "description": "Server-to-server integration surface for merchant API keys.",
     "version": "1.0",
     "contact": {}
   },
-  "tags": [],
   "servers": [
     {
       "url": "https://api-sandbox.paygood.co",
@@ -4689,8 +2230,9 @@
     "securitySchemes": {
       "bearer": {
         "scheme": "bearer",
-        "bearerFormat": "operator_<prefix>_<secret>",
-        "type": "http"
+        "bearerFormat": "merchant_<prefix>_<secret>",
+        "type": "http",
+        "description": "Merchant API key bearer token. Legacy wire prefixes `api_key_` and `api_` are also accepted."
       }
     },
     "schemas": {
@@ -4727,6 +2269,11 @@
             "enum": [
               "accepted"
             ]
+          },
+          "testOtp": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6
           }
         },
         "required": [
@@ -4924,7 +2471,7 @@
           "paymentInstrumentId"
         ]
       },
-      "PaymentResponseDto": {
+      "CreatePaymentResponseDto": {
         "type": "object",
         "properties": {
           "paymentId": {
@@ -4961,12 +2508,6 @@
           "metadata": {
             "type": "object",
             "additionalProperties": {}
-          },
-          "processor": {
-            "type": "string",
-            "enum": [
-              "finix"
-            ]
           },
           "amount": {
             "type": "integer",
@@ -5020,7 +2561,6 @@
           "paymentInstrumentId",
           "priceId",
           "captureMethod",
-          "processor",
           "amount",
           "currency",
           "status",
@@ -5070,12 +2610,6 @@
                   "type": "object",
                   "additionalProperties": {}
                 },
-                "processor": {
-                  "type": "string",
-                  "enum": [
-                    "finix"
-                  ]
-                },
                 "amount": {
                   "type": "integer",
                   "minimum": -9007199254740991,
@@ -5118,6 +2652,12 @@
                   "type": "string",
                   "format": "date-time",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
                 }
               },
               "required": [
@@ -5128,11 +2668,11 @@
                 "paymentInstrumentId",
                 "priceId",
                 "captureMethod",
-                "processor",
                 "amount",
                 "currency",
                 "status",
-                "createdAt"
+                "createdAt",
+                "processor"
               ]
             }
           },
@@ -5816,6 +3356,39 @@
           "last4"
         ]
       },
+      "CreateTokenizationIntentDto": {
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "customerId"
+        ]
+      },
+      "CreateTokenizationIntentResponseDto": {
+        "type": "object",
+        "properties": {
+          "intentId": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "intentId",
+          "token",
+          "expiresAt"
+        ]
+      },
       "BasisTheorySessionResponseDto": {
         "type": "object",
         "properties": {
@@ -5826,6 +3399,43 @@
         },
         "required": [
           "sessionKey"
+        ]
+      },
+      "CreatePaymentInstrumentDto": {
+        "type": "object",
+        "properties": {
+          "vaultToken": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Basis Theory token id from the client Element"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+          },
+          "instrumentHolderName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Name on the instrument (cardholder or bank account owner) — forwarded to Finix PI name"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "vaultToken",
+          "instrumentHolderName",
+          "customerId",
+          "idempotencyKey"
         ]
       },
       "PaymentInstrumentResponseDto": {
@@ -5896,7 +3506,8 @@
                       "ca_eft",
                       "gb_domestic",
                       "iban"
-                    ]
+                    ],
+                    "description": "Bank account scheme (us_domestic, ca_eft, gb_domestic, iban)"
                   },
                   "bankName": {
                     "type": "string"
@@ -8069,6 +5680,314 @@
           "createdAt"
         ]
       },
+      "ListDashboardInvoicesResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "invoiceId": {
+                  "type": "string"
+                },
+                "invoiceNumber": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "invoiceUrlSlug": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Secret pay-link token. Anyone holding this value can view and pay the invoice anonymously, so treat it like a credential: safe to send to the customer, never safe to log or expose publicly. Unguessable and unrelated to `invoiceId`, so it can be rotated without changing the invoice."
+                },
+                "idempotencyKey": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "customerId": {
+                  "type": "string"
+                },
+                "currentRevisionNumber": {
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "draft",
+                    "issued",
+                    "partially_paid",
+                    "paid",
+                    "void"
+                  ]
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "lineItems": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "product_charge"
+                            ]
+                          },
+                          "productId": {
+                            "type": "string"
+                          },
+                          "priceId": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 500
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0
+                          },
+                          "unitAmount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "lineTotal": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "productId",
+                          "description",
+                          "quantity",
+                          "unitAmount",
+                          "lineTotal"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "manual_adjustment"
+                            ]
+                          },
+                          "description": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 500
+                          },
+                          "amount": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          "quantity": {
+                            "type": "integer",
+                            "exclusiveMinimum": true,
+                            "maximum": 9007199254740991,
+                            "minimum": 0
+                          },
+                          "lineTotal": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "description",
+                          "amount",
+                          "quantity",
+                          "lineTotal"
+                        ],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "productTotal": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "total": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ]
+                },
+                "amountPaid": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ],
+                  "description": "Sum of applied payment allocations, both processed and out-of-band."
+                },
+                "amountRemaining": {
+                  "type": "object",
+                  "properties": {
+                    "amount": {
+                      "type": "integer",
+                      "exclusiveMinimum": true,
+                      "maximum": 9007199254740991,
+                      "minimum": 0
+                    },
+                    "currency": {
+                      "description": "Supported currency code (USD, CAD)",
+                      "type": "string",
+                      "minLength": 3,
+                      "maxLength": 3
+                    }
+                  },
+                  "required": [
+                    "amount",
+                    "currency"
+                  ],
+                  "description": "Computed as `total` minus `amountPaid`. Zero when the invoice is fully paid."
+                },
+                "dueDate": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "paidAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "notes": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": {}
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "checkoutUrl": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Customer-facing checkout URL for this invoice, built from `CHECKOUT_URL` and the invoice slug."
+                }
+              },
+              "required": [
+                "invoiceId",
+                "invoiceNumber",
+                "invoiceUrlSlug",
+                "idempotencyKey",
+                "merchantId",
+                "customerId",
+                "currentRevisionNumber",
+                "status",
+                "currency",
+                "lineItems",
+                "productTotal",
+                "total",
+                "amountPaid",
+                "amountRemaining",
+                "createdAt",
+                "updatedAt",
+                "checkoutUrl"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean",
+                "description": "True when another page exists after this response."
+              },
+              "nextCursor": {
+                "description": "Opaque cursor to pass as the next request `cursor` when `hasMore` is true.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
       "CreateCheckoutSessionDto": {
         "type": "object",
         "properties": {
@@ -8090,6 +6009,10 @@
             "minLength": 1
           },
           "token": {
+            "type": "string",
+            "minLength": 1
+          },
+          "tokenizationIntentToken": {
             "type": "string",
             "minLength": 1
           },
@@ -8283,6 +6206,7 @@
         "required": [
           "sessionId",
           "token",
+          "tokenizationIntentToken",
           "expiresAt",
           "payable"
         ]
@@ -8518,19 +6442,14 @@
                 "properties": {
                   "id": {
                     "type": "string",
-                    "minLength": 1
-                  },
-                  "provider": {
-                    "type": "string",
-                    "enum": [
-                      "basistheory"
-                    ]
+                    "minLength": 1,
+                    "description": "Basis Theory token id from the client Element"
                   }
                 },
                 "required": [
-                  "id",
-                  "provider"
-                ]
+                  "id"
+                ],
+                "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
               },
               "instrumentHolderName": {
                 "type": "string",
@@ -9341,19 +7260,14 @@
                 "properties": {
                   "id": {
                     "type": "string",
-                    "minLength": 1
-                  },
-                  "provider": {
-                    "type": "string",
-                    "enum": [
-                      "basistheory"
-                    ]
+                    "minLength": 1,
+                    "description": "Basis Theory token id from the client Element"
                   }
                 },
                 "required": [
-                  "id",
-                  "provider"
-                ]
+                  "id"
+                ],
+                "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
               },
               "email": {
                 "type": "string"
@@ -9609,19 +7523,14 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "minLength": 1
-                    },
-                    "provider": {
-                      "type": "string",
-                      "enum": [
-                        "basistheory"
-                      ]
+                      "minLength": 1,
+                      "description": "Basis Theory token id from the client Element"
                     }
                   },
                   "required": [
-                    "id",
-                    "provider"
-                  ]
+                    "id"
+                  ],
+                  "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
                 },
                 "phone": {
                   "type": "string"
@@ -9676,19 +7585,14 @@
                   "properties": {
                     "id": {
                       "type": "string",
-                      "minLength": 1
-                    },
-                    "provider": {
-                      "type": "string",
-                      "enum": [
-                        "basistheory"
-                      ]
+                      "minLength": 1,
+                      "description": "Basis Theory token id from the client Element"
                     }
                   },
                   "required": [
-                    "id",
-                    "provider"
-                  ]
+                    "id"
+                  ],
+                  "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
                 },
                 "currency": {
                   "description": "Supported currency code (USD, CAD)",
@@ -9885,74 +7789,157 @@
           "items"
         ]
       },
-      "GetDashboardPayoutAccountResponseDto": {
+      "ListDashboardPayoutAccountsResponseDto": {
         "type": "object",
         "properties": {
-          "payoutAccount": {
-            "type": "object",
-            "properties": {
-              "payoutAccountId": {
-                "type": "string"
-              },
-              "accountType": {
-                "type": "string",
-                "enum": [
-                  "personal",
-                  "business"
-                ]
-              },
-              "accountHolderName": {
-                "type": "string",
-                "minLength": 1
-              },
-              "displayDetails": {
-                "type": "object",
-                "properties": {
-                  "last4": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "scheme": {
-                    "type": "string",
-                    "minLength": 1
-                  },
-                  "bankName": {
-                    "type": "string",
-                    "minLength": 1
-                  }
+          "payoutAccounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "payoutAccountId": {
+                  "type": "string"
                 },
-                "required": [
-                  "last4",
-                  "scheme"
-                ]
+                "accountOwnerType": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "business"
+                  ]
+                },
+                "accountHolderName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "nickname": {
+                  "type": "string",
+                  "minLength": 1,
+                  "nullable": true
+                },
+                "displayDetails": {
+                  "type": "object",
+                  "properties": {
+                    "last4": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "scheme": {
+                      "type": "string",
+                      "enum": [
+                        "us_domestic",
+                        "ca_eft"
+                      ],
+                      "description": "Payout bank account scheme (us_domestic, ca_eft)"
+                    },
+                    "bankName": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "last4",
+                    "scheme"
+                  ]
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending_verification",
+                    "active",
+                    "disabled"
+                  ]
+                },
+                "isActive": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "disabledAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                }
               },
-              "currency": {
-                "type": "string",
-                "minLength": 1
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "pending_verification",
-                  "active",
-                  "disabled"
-                ]
-              }
-            },
-            "required": [
-              "payoutAccountId",
-              "accountType",
-              "accountHolderName",
-              "displayDetails",
-              "currency",
-              "status"
-            ],
-            "nullable": true
+              "required": [
+                "payoutAccountId",
+                "accountOwnerType",
+                "accountHolderName",
+                "nickname",
+                "displayDetails",
+                "currency",
+                "status",
+                "isActive",
+                "createdAt",
+                "disabledAt"
+              ]
+            }
           }
         },
         "required": [
-          "payoutAccount"
+          "payoutAccounts"
         ]
+      },
+      "UpdateDashboardPayoutAccountBodyDto": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 1
+          },
+          "accountOwnerType": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "business"
+            ]
+          },
+          "accountHolderName": {
+            "type": "string",
+            "minLength": 1
+          },
+          "nickname": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "vaultToken": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Basis Theory token id from the client Element"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          }
+        },
+        "required": [
+          "idempotencyKey",
+          "accountOwnerType",
+          "accountHolderName",
+          "vaultToken"
+        ],
+        "additionalProperties": false
       },
       "ListMerchantApiKeysResponseDto": {
         "type": "object",
