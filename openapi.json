@@ -1,6 +1,198 @@
 {
   "openapi": "3.0.0",
   "paths": {
+    "/payments/{paymentId}/refunds": {
+      "get": {
+        "description": "Returns refunds for a payment sorted by newest first using cursor pagination.",
+        "operationId": "RefundsController_list",
+        "parameters": [
+          {
+            "name": "paymentId",
+            "required": true,
+            "in": "path",
+            "description": "Payment TypeID (`pmt_...`) whose refunds to list.",
+            "schema": {
+              "example": "pmt_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "Opaque cursor from a previous `page.nextCursor`. Treat as an unreadable token.",
+            "schema": {
+              "example": "eyJ2IjoxLCJkYXRhIjp7InJlZnVuZGVkQXQiOiIyMDI2LTAzLTAxVDEyOjAwOjAwLjAwMFoiLCJpZCI6InJmdW5kXzAxLi4uIn19",
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items to return. Maximum 100. If omitted, server default is used.",
+            "schema": {
+              "example": 25,
+              "type": "number"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) that owns the payment.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPaymentRefundsResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List refunds for a payment",
+        "tags": [
+          "payments"
+        ]
+      },
+      "post": {
+        "description": "Issues a full refund against a captured or completed payment. The refund is synchronous: PayGood calls Finix to reverse the capture transfer, persists the refund, and emits `payments.PaymentRefunded`. Omit `amount` to refund the full remaining balance.",
+        "operationId": "RefundsController_create",
+        "parameters": [
+          {
+            "name": "paymentId",
+            "required": true,
+            "in": "path",
+            "description": "Payment TypeID (`pmt_...`) to refund.",
+            "schema": {
+              "example": "pmt_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Optional refund amount, in the payment currency. Omit for a full refund; if provided, must equal the full remaining refundable balance during MVP.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRefundDto"
+              },
+              "examples": {
+                "fullRefund": {
+                  "summary": "Full refund (recommended MVP shape)",
+                  "value": {}
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Refund a captured payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
+    "/payments/{paymentId}/refunds/{refundId}": {
+      "get": {
+        "description": "Returns a single refund scoped to the parent payment.",
+        "operationId": "RefundsController_get",
+        "parameters": [
+          {
+            "name": "paymentId",
+            "required": true,
+            "in": "path",
+            "description": "Payment TypeID (`pmt_...`) that owns the refund.",
+            "schema": {
+              "example": "pmt_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          },
+          {
+            "name": "refundId",
+            "required": true,
+            "in": "path",
+            "description": "Refund TypeID (`refund_...`).",
+            "schema": {
+              "example": "refund_01hxy8m1nqk9g3x3y3p0azq2r1",
+              "type": "string"
+            }
+          },
+          {
+            "name": "merchantId",
+            "required": true,
+            "in": "query",
+            "description": "Merchant TypeID (`mer_...`) that owns the payment.",
+            "schema": {
+              "example": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a refund for a payment",
+        "tags": [
+          "payments"
+        ]
+      }
+    },
     "/payments": {
       "get": {
         "description": "Returns payments sorted by newest first using cursor pagination. Use `page.nextCursor` as the next `cursor` value. Optional `start` and `end` filters bound `createdAt` inclusively.",
@@ -82,7 +274,18 @@
       "post": {
         "description": "Creates a one-time payment using a payment instrument and either an active price (`priceId`) or raw amount compatibility (`amount` + `currency`). Optional `description` and `metadata` are stored on the payment.",
         "operationId": "PaymentsController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
           "description": "Payment creation payload.",
@@ -207,6 +410,16 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
@@ -243,19 +456,13 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Optional customer phone number."
-                      },
-                      "idempotencyKey": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Idempotency key for safe create retries."
                       }
                     },
                     "required": [
                       "entityType",
                       "firstName",
                       "lastName",
-                      "email",
-                      "idempotencyKey"
+                      "email"
                     ]
                   },
                   {
@@ -280,18 +487,12 @@
                         "type": "string",
                         "minLength": 1,
                         "description": "Optional customer phone number."
-                      },
-                      "idempotencyKey": {
-                        "type": "string",
-                        "minLength": 1,
-                        "description": "Idempotency key for safe create retries."
                       }
                     },
                     "required": [
                       "entityType",
                       "organizationName",
-                      "email",
-                      "idempotencyKey"
+                      "email"
                     ]
                   }
                 ],
@@ -307,8 +508,7 @@
                     "firstName": "Ahmadou",
                     "lastName": "Diallo",
                     "email": "ahmadou.diallo@example.com",
-                    "phone": "+12025550125",
-                    "idempotencyKey": "idem_merchant_customer_individual_001"
+                    "phone": "+12025550125"
                   }
                 },
                 "organization": {
@@ -317,8 +517,7 @@
                     "entityType": "organization",
                     "organizationName": "Sahel Trade Co",
                     "email": "ops@saheltrade.example.com",
-                    "phone": "+12025550126",
-                    "idempotencyKey": "idem_merchant_customer_organization_001"
+                    "phone": "+12025550126"
                   }
                 }
               }
@@ -401,14 +600,83 @@
         ]
       }
     },
+    "/payment-instruments/{paymentInstrumentId}/verify": {
+      "post": {
+        "description": "Proxies to Finix `PUT /payment_instruments/{id}` to return CVV, AVS, and name verification results for an existing card PI. Requires an Idempotency-Key header for API consistency; verification is re-runnable and is not deduped server-side in v1.",
+        "operationId": "PaymentInstrumentsController_verify",
+        "parameters": [
+          {
+            "name": "paymentInstrumentId",
+            "required": true,
+            "in": "path",
+            "description": "PayGood payment instrument TypeID (`pi_…`).",
+            "schema": {
+              "example": "pi_01hxy8m1nqk9g3x3y3p0azq2zz",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VerifyPaymentInstrumentResponseDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid bearer token."
+          },
+          "404": {
+            "description": "Payment instrument not found or merchant lacks a charge grant on the instrument."
+          },
+          "422": {
+            "description": "Instrument is not an active card or is missing a processor reference."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Verify a registered card payment instrument",
+        "tags": [
+          "payment-instruments"
+        ]
+      }
+    },
     "/payment-instruments": {
       "post": {
-        "description": "Accepts a Basis Theory vault token id only (`vaultToken.id`). Do not send a vault provider field.",
+        "description": "Accepts a Basis Theory vault token reference (`vaultToken.id`, `vaultToken.provider`, `vaultToken.kind`, optional `vaultToken.fingerprint`).",
         "operationId": "PaymentInstrumentsController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "description": "Payment instrument registration payload. `vaultToken` is `{ id }` only; Basis Theory is inferred server-side.",
+          "description": "Payment instrument registration payload. `vaultToken` requires `id`, `provider`, and `kind`; `fingerprint` is optional when the Element provides it.",
           "content": {
             "application/json": {
               "schema": {
@@ -419,11 +687,20 @@
                   "summary": "Register a card instrument",
                   "value": {
                     "vaultToken": {
-                      "id": "bt_card_token_abc123"
+                      "id": "bt_card_token_abc123",
+                      "provider": "basistheory",
+                      "kind": "token_intent",
+                      "fingerprint": "fp_card_abc123"
                     },
                     "instrumentHolderName": "Amina Diallo",
                     "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
-                    "idempotencyKey": "idem-pi-01"
+                    "billingAddress": {
+                      "line1": "123 Main St",
+                      "city": "Minneapolis",
+                      "region": "MN",
+                      "postalCode": "55401",
+                      "country": "US"
+                    }
                   }
                 }
               }
@@ -455,7 +732,7 @@
     },
     "/catalog/products": {
       "get": {
-        "description": "Returns catalog products sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively. Requires `catalog.manage` capability for the scoped merchant.",
+        "description": "Returns catalog products sorted by newest first using cursor pagination. Optional `start` and `end` filters bound `createdAt` inclusively. Requires `catalog.view` capability for the scoped merchant.",
         "operationId": "CatalogProductsController_list",
         "parameters": [
           {
@@ -527,7 +804,7 @@
             "description": "Missing or invalid bearer token."
           },
           "403": {
-            "description": "Caller is authenticated but lacks `catalog.manage` capability for this merchant."
+            "description": "Caller is authenticated but lacks `catalog.view` capability for this merchant."
           }
         },
         "security": [
@@ -541,12 +818,23 @@
         ]
       },
       "post": {
-        "description": "Creates a merchant-scoped catalog product. Requires idempotency key and merchant scope.",
+        "description": "Creates a merchant-scoped catalog product. Requires Idempotency-Key header and merchant scope.",
         "operationId": "CatalogProductsController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "description": "Create payload with idempotency key and merchant-scoped product details.",
+          "description": "Create payload with merchant-scoped product details. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -626,7 +914,7 @@
         ]
       },
       "put": {
-        "description": "Updates a merchant-scoped catalog product name and description. Requires idempotency key and `catalog.manage` capability.",
+        "description": "Updates a merchant-scoped catalog product name and description. Requires Idempotency-Key header and `catalog.manage` capability.",
         "operationId": "CatalogProductsController_update",
         "parameters": [
           {
@@ -637,11 +925,21 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Update payload with idempotency key, merchant scope, product name, and optional description.",
+          "description": "Update payload with merchant scope, product name, and optional description. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -687,7 +985,7 @@
     },
     "/catalog/products/{productId}/price": {
       "put": {
-        "description": "Atomically replaces a product price by creating a new active price and archiving any existing active prices for the same product/merchant scope. This endpoint is idempotent by `idempotencyKey` per merchant.",
+        "description": "Atomically replaces a product price by creating a new active price and archiving any existing active prices for the same product/merchant scope. Idempotent by Idempotency-Key header per merchant.",
         "operationId": "CatalogProductsController_updatePrice",
         "parameters": [
           {
@@ -699,11 +997,21 @@
               "example": "prod_01hxy8m1nqk9g3x3y3p0azq2bg",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Replacement price payload with merchant scope, idempotency key, and money/type fields.",
+          "description": "Replacement price payload with merchant scope and money/type fields. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -713,7 +1021,6 @@
                 "oneTimePrice": {
                   "summary": "Replace with one-time USD 25.00 price",
                   "value": {
-                    "idempotencyKey": "idempo_catalog_product_price_01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "amount": 2500,
                     "currency": "USD",
@@ -723,7 +1030,6 @@
                 "recurringPrice": {
                   "summary": "Replace with recurring monthly USD 12.00 price",
                   "value": {
-                    "idempotencyKey": "idempo_catalog_product_price_02",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "amount": 1200,
                     "currency": "USD",
@@ -791,11 +1097,21 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Status update payload with idempotency key, merchant scope, and target status.",
+          "description": "Status update payload with merchant scope and target status. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -906,12 +1222,23 @@
         ]
       },
       "post": {
-        "description": "Creates a merchant-scoped price that is either one-time or recurring.",
+        "description": "Creates a merchant-scoped price that is either one-time or recurring. When an active price with the same amount, currency, type, interval, and product already exists for the merchant, returns that price instead of creating a duplicate.",
         "operationId": "CatalogPricesController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "description": "Create payload with idempotency key, merchant scope, money fields, and optional product link.",
+          "description": "Create payload with merchant scope, money fields, and optional product link. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -921,6 +1248,16 @@
           }
         },
         "responses": {
+          "200": {
+            "description": "An existing active price with the same fingerprint was returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceResponseDto"
+                }
+              }
+            }
+          },
           "201": {
             "description": "",
             "content": {
@@ -1003,11 +1340,21 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Archive payload with idempotency key and merchant scope.",
+          "description": "Archive payload with merchant scope. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1139,10 +1486,21 @@
       "post": {
         "description": "Creates a merchant-scoped draft invoice with a sequential merchant invoice number. Line items may mix catalog product charges and manual adjustments such as merchant-calculated tax or shipping.",
         "operationId": "InvoicesController_create",
-        "parameters": [],
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
+          }
+        ],
         "requestBody": {
           "required": true,
-          "description": "Create payload with idempotency key, merchant/customer references, and mixed line items.",
+          "description": "Create payload with merchant/customer references and mixed line items. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1152,7 +1510,6 @@
                 "productLines": {
                   "summary": "Product line items only",
                   "value": {
-                    "idempotencyKey": "idem-inv-01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
                     "currency": "usd",
@@ -1171,7 +1528,6 @@
                 "manualAdjustmentLines": {
                   "summary": "Manual adjustment lines (tax/shipping)",
                   "value": {
-                    "idempotencyKey": "idem-inv-02",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
                     "currency": "usd",
@@ -1192,7 +1548,6 @@
                 "mixedLines": {
                   "summary": "Mixed product and manual line items",
                   "value": {
-                    "idempotencyKey": "idem-inv-03",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
                     "currency": "usd",
@@ -1322,11 +1677,21 @@
               "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Revision payload with idempotency key, merchant scope, and full replacement line-item snapshot.",
+          "description": "Revision payload with merchant scope and full replacement line-item snapshot. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1336,7 +1701,6 @@
                 "reviseManualAdjustmentQuantity": {
                   "summary": "Revise manual adjustment quantity",
                   "value": {
-                    "idempotencyKey": "idem-inv-revise-01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "currency": "usd",
                     "lineItems": [
@@ -1473,7 +1837,7 @@
         ]
       },
       "post": {
-        "description": "Charges a payment instrument for all or part of the remaining balance. The returned allocation is `pending`: the invoice balance does not move until the processor reports a capture, so `amountPaid` and `status` in this response still reflect the pre-charge state. Idempotent by idempotency key per invoice — a replay returns the existing allocation without charging again.",
+        "description": "Charges a payment instrument for all or part of the remaining balance. The invoice balance does not move until the processor reports a capture, which this endpoint waits briefly for so the response's `amountPaid` and `status` usually reflect the settled state; if capture hasn't landed by the time the wait elapses, the allocation is still `pending` and the response reflects the pre-charge state. Idempotent by idempotency key per invoice — a replay returns the existing allocation without charging again.",
         "operationId": "InvoicesController_charge",
         "parameters": [
           {
@@ -1485,11 +1849,21 @@
               "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Charge payload with idempotency key, merchant scope, payment instrument, and optional partial amount.",
+          "description": "Charge payload with merchant scope, payment instrument, and optional partial amount. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1499,7 +1873,6 @@
                 "chargeFullBalance": {
                   "summary": "Charge the full remaining balance",
                   "value": {
-                    "idempotencyKey": "idem-inv-charge-01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1"
                   }
@@ -1507,7 +1880,6 @@
                 "chargePartialAmount": {
                   "summary": "Charge a partial amount",
                   "value": {
-                    "idempotencyKey": "idem-inv-charge-02",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2p1",
                     "amount": 20000
@@ -1566,11 +1938,21 @@
               "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Out-of-band payload with idempotency key, merchant scope, method, and optional amount, effective date, and reference.",
+          "description": "Out-of-band payload with merchant scope, method, and optional amount, effective date, and reference. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1580,7 +1962,6 @@
                 "cashInFull": {
                   "summary": "Cash, full remaining balance",
                   "value": {
-                    "idempotencyKey": "idem-inv-oob-01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "method": "cash"
                   }
@@ -1588,7 +1969,6 @@
                 "checkPartial": {
                   "summary": "Check, partial amount with check number",
                   "value": {
-                    "idempotencyKey": "idem-inv-oob-02",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "method": "check",
                     "amount": 20000,
@@ -1598,7 +1978,6 @@
                 "zelleBackDated": {
                   "summary": "Zelle, back-dated to when the transfer landed",
                   "value": {
-                    "idempotencyKey": "idem-inv-oob-03",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "method": "zelle",
                     "amount": 50000,
@@ -1609,7 +1988,6 @@
                 "otherRequiresReference": {
                   "summary": "Other, which requires a reference",
                   "value": {
-                    "idempotencyKey": "idem-inv-oob-04",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "method": "other",
                     "reference": "Bartered against Q3 hosting credit"
@@ -1754,11 +2132,21 @@
               "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Send payload with idempotency key, merchant scope, and optional recipient email override.",
+          "description": "Send payload with merchant scope and optional recipient email override. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1768,14 +2156,12 @@
                 "sendToCustomerDefault": {
                   "summary": "Send to customer email on file",
                   "value": {
-                    "idempotencyKey": "idem-inv-send-01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
                   }
                 },
                 "sendToOverrideRecipient": {
                   "summary": "Send to an override recipient",
                   "value": {
-                    "idempotencyKey": "idem-inv-send-02",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
                     "recipientEmail": "billing@customer.example"
                   }
@@ -1836,11 +2222,21 @@
               "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
               "type": "string"
             }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "description": "Client-supplied unique key for safe retries of this mutating request. Scoped per merchant or resource as documented on each endpoint.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "idem-01"
+            }
           }
         ],
         "requestBody": {
           "required": true,
-          "description": "Void payload with idempotency key and merchant scope.",
+          "description": "Void payload with merchant scope. Supply idempotency via the Idempotency-Key header.",
           "content": {
             "application/json": {
               "schema": {
@@ -1850,7 +2246,6 @@
                 "voidInvoice": {
                   "summary": "Void invoice request",
                   "value": {
-                    "idempotencyKey": "idem-inv-void-01",
                     "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
                   }
                 }
@@ -2089,10 +2484,111 @@
         "scheme": "bearer",
         "bearerFormat": "merchant_<prefix>_<secret>",
         "type": "http",
-        "description": "Merchant API key bearer token. Legacy wire prefixes `api_key_` and `api_` are also accepted."
+        "description": "Merchant API key bearer token."
       }
     },
     "schemas": {
+      "RequestOperatorOtpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "RequestOperatorOtpAcceptedResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "accepted"
+            ]
+          },
+          "testOtp": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "VerifyOperatorOtpDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "otp": {
+            "type": "string",
+            "minLength": 6,
+            "maxLength": 6
+          }
+        },
+        "required": [
+          "email",
+          "otp"
+        ]
+      },
+      "VerifyOperatorOtpResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "authenticated"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "OperatorCsrfResponseDto": {
+        "type": "object",
+        "properties": {
+          "csrfToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "csrfToken"
+        ]
+      },
+      "OperatorMeResponseDto": {
+        "type": "object",
+        "properties": {
+          "operatorId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 1,
+            "nullable": true
+          }
+        },
+        "required": [
+          "operatorId",
+          "email",
+          "displayName"
+        ]
+      },
       "EmitProbeResponseDto": {
         "type": "object",
         "properties": {
@@ -2149,6 +2645,18 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "MemberCsrfResponseDto": {
+        "type": "object",
+        "properties": {
+          "csrfToken": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "csrfToken"
         ]
       },
       "MemberMeResponseDto": {
@@ -2272,13 +2780,150 @@
           "failedHop"
         ]
       },
-      "CreatePaymentDto": {
+      "CreateRefundDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
+          "amount": {
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          }
+        }
+      },
+      "RefundResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "paymentId": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "currency": {
+            "description": "Supported currency code (USD, CAD)",
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
+          "processorReferenceId": {
             "type": "string",
             "minLength": 1
           },
+          "refundedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "paymentStatus": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "authorized",
+              "captured",
+              "completed",
+              "voided",
+              "refunded",
+              "declined"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "paymentId",
+          "amount",
+          "currency",
+          "processorReferenceId",
+          "refundedAt",
+          "paymentStatus"
+        ]
+      },
+      "ListPaymentRefundsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "paymentId": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "processorReferenceId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "refundedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "paymentStatus": {
+                  "type": "string",
+                  "enum": [
+                    "pending",
+                    "authorized",
+                    "captured",
+                    "completed",
+                    "voided",
+                    "refunded",
+                    "declined"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "paymentId",
+                "amount",
+                "currency",
+                "processorReferenceId",
+                "refundedAt",
+                "paymentStatus"
+              ]
+            }
+          },
+          "page": {
+            "type": "object",
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "hasMore"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "page"
+        ]
+      },
+      "CreatePaymentDto": {
+        "type": "object",
+        "properties": {
           "customerId": {
             "type": "string"
           },
@@ -2322,7 +2967,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "customerId",
           "merchantId",
           "paymentInstrumentId"
@@ -2400,6 +3044,11 @@
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           },
           "capturedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "settledAt": {
             "type": "string",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
@@ -2501,6 +3150,11 @@
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
                 },
                 "capturedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "settledAt": {
                   "type": "string",
                   "format": "date-time",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
@@ -3258,6 +3912,103 @@
           "sessionKey"
         ]
       },
+      "VerifyPaymentInstrumentResponseDto": {
+        "type": "object",
+        "properties": {
+          "paymentInstrumentId": {
+            "type": "string"
+          },
+          "processorInstrumentId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "addressVerification": {
+            "type": "string",
+            "enum": [
+              "postal_code_and_street_match",
+              "street_match",
+              "postal_code_match",
+              "no_address",
+              "no_match",
+              "not_supported",
+              "unknown"
+            ]
+          },
+          "securityCodeVerification": {
+            "type": "string",
+            "enum": [
+              "matched",
+              "unmatched",
+              "unknown"
+            ]
+          },
+          "nameVerification": {
+            "type": "object",
+            "properties": {
+              "fullName": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match",
+                  "partial_match",
+                  "not_supported",
+                  "unknown"
+                ]
+              },
+              "firstName": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match",
+                  "partial_match",
+                  "not_supported",
+                  "unknown"
+                ]
+              },
+              "lastName": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match",
+                  "partial_match",
+                  "not_supported",
+                  "unknown"
+                ]
+              },
+              "middleName": {
+                "type": "string",
+                "enum": [
+                  "match",
+                  "no_match",
+                  "partial_match",
+                  "not_supported",
+                  "unknown"
+                ]
+              }
+            },
+            "required": [
+              "fullName",
+              "firstName",
+              "lastName",
+              "middleName"
+            ],
+            "nullable": true
+          },
+          "verifiedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "paymentInstrumentId",
+          "processorInstrumentId",
+          "addressVerification",
+          "securityCodeVerification",
+          "nameVerification",
+          "verifiedAt"
+        ]
+      },
       "CreatePaymentInstrumentDto": {
         "type": "object",
         "properties": {
@@ -3268,12 +4019,33 @@
                 "type": "string",
                 "minLength": 1,
                 "description": "Basis Theory token id from the client Element"
+              },
+              "provider": {
+                "type": "string",
+                "description": "Vault provider that tokenized the sensitive data",
+                "enum": [
+                  "basistheory"
+                ]
+              },
+              "fingerprint": {
+                "description": "Basis Theory token fingerprint from the client Element. Optional during rollout; stored when provided.",
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "token",
+                  "token_intent"
+                ],
+                "description": "Basis Theory resource kind: token (long-lived, recurring) or token_intent (short-lived, one-time)"
               }
             },
             "required": [
-              "id"
-            ],
-            "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+              "id",
+              "provider",
+              "kind"
+            ]
           },
           "instrumentHolderName": {
             "type": "string",
@@ -3283,16 +4055,44 @@
           "customerId": {
             "type": "string"
           },
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
+          "billingAddress": {
+            "type": "object",
+            "properties": {
+              "line1": {
+                "type": "string",
+                "minLength": 1
+              },
+              "line2": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string",
+                "minLength": 1
+              },
+              "region": {
+                "type": "string"
+              },
+              "postalCode": {
+                "type": "string",
+                "minLength": 1
+              },
+              "country": {
+                "type": "string",
+                "minLength": 2
+              }
+            },
+            "required": [
+              "line1",
+              "city",
+              "postalCode",
+              "country"
+            ]
           }
         },
         "required": [
           "vaultToken",
           "instrumentHolderName",
-          "customerId",
-          "idempotencyKey"
+          "customerId"
         ]
       },
       "PaymentInstrumentResponseDto": {
@@ -3404,10 +4204,6 @@
       "CreateProductDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           },
@@ -3420,7 +4216,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "name"
         ]
@@ -3536,10 +4331,6 @@
       "UpdateProductDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           },
@@ -3553,7 +4344,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "name"
         ]
@@ -3561,11 +4351,6 @@
       "UpdateProductPriceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Client-generated key used to deduplicate retries for this price update operation."
-          },
           "merchantId": {
             "type": "string",
             "description": "Merchant TypeID (`mer_...`) that owns the product and replacement price."
@@ -3598,7 +4383,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "amount",
           "currency"
@@ -3661,10 +4445,6 @@
       "UpdateProductStatusDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           },
@@ -3677,7 +4457,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "status"
         ]
@@ -3685,10 +4464,6 @@
       "CreatePriceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           },
@@ -3720,7 +4495,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "amount",
           "currency"
@@ -3809,26 +4583,17 @@
       "ArchivePriceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId"
         ]
       },
       "CreateInvoiceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           },
@@ -3938,7 +4703,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "customerId",
           "currency",
@@ -4222,10 +4986,6 @@
       "UpdateInvoiceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           },
@@ -4336,7 +5096,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "currency",
           "lineItems"
@@ -4345,11 +5104,6 @@
       "ChargeInvoiceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Idempotency key for safe retries of the charge per invoice."
-          },
           "merchantId": {
             "type": "string",
             "description": "Merchant TypeID (`mer_...`) used for authorization scope."
@@ -4367,7 +5121,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "paymentInstrumentId"
         ]
@@ -4783,11 +5536,6 @@
       "RecordOutOfBandInvoicePaymentDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Idempotency key for safe retries of the recording per invoice."
-          },
           "merchantId": {
             "type": "string",
             "description": "Merchant TypeID (`mer_...`) used for authorization scope."
@@ -4828,7 +5576,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId",
           "method"
         ]
@@ -4999,11 +5746,6 @@
       "SendInvoiceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Idempotency key for safe retries of the send operation per invoice."
-          },
           "merchantId": {
             "type": "string",
             "description": "Merchant TypeID (`mer_...`) used for authorization scope."
@@ -5016,23 +5758,17 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId"
         ]
       },
       "VoidInvoiceDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "merchantId": {
             "type": "string"
           }
         },
         "required": [
-          "idempotencyKey",
           "merchantId"
         ]
       },
@@ -6281,10 +7017,6 @@
       "CreateCheckoutSessionPaymentDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "paymentMethod": {
             "type": "object",
             "properties": {
@@ -6301,16 +7033,70 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Basis Theory token id from the client Element"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "Vault provider that tokenized the sensitive data",
+                    "enum": [
+                      "basistheory"
+                    ]
+                  },
+                  "fingerprint": {
+                    "description": "Basis Theory token fingerprint from the client Element. Optional during rollout; stored when provided.",
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "token",
+                      "token_intent"
+                    ],
+                    "description": "Basis Theory resource kind: token (long-lived, recurring) or token_intent (short-lived, one-time)"
                   }
                 },
                 "required": [
-                  "id"
-                ],
-                "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+                  "id",
+                  "provider",
+                  "kind"
+                ]
               },
               "instrumentHolderName": {
                 "type": "string",
                 "minLength": 1
+              },
+              "billingAddress": {
+                "type": "object",
+                "properties": {
+                  "line1": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "line2": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "postalCode": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "country": {
+                    "type": "string",
+                    "minLength": 2
+                  }
+                },
+                "required": [
+                  "line1",
+                  "city",
+                  "postalCode",
+                  "country"
+                ]
               }
             },
             "required": [
@@ -6327,7 +7113,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "paymentMethod"
         ]
       },
@@ -7054,10 +7839,6 @@
       "CreateMerchantApplicationDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "country": {
             "type": "string",
             "enum": [
@@ -7073,18 +7854,686 @@
             "minLength": 1,
             "maxLength": 32
           }
+        }
+      },
+      "GetMerchantApplicationResponseDto": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string"
+          },
+          "parentMerchantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "country": {
+            "type": "string",
+            "enum": [
+              "US",
+              "CA"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "draft",
+              "submitted",
+              "processor_review",
+              "amendments_required",
+              "approved"
+            ],
+            "description": "Merchant application lifecycle status (lowercase wire values). `draft` — editable onboarding in progress. `submitted` — member submitted; processor handoff pending. `processor_review` — under processor (Finix) review. `amendments_required` — operator requested changes; member may edit and resubmit. `approved` — approved and materialized as a merchant (`merchantId` set)."
+          },
+          "merchantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "nullable": true
+          },
+          "amendmentsNote": {
+            "type": "string",
+            "nullable": true
+          },
+          "feeProfileId": {
+            "type": "string",
+            "pattern": "^FP[A-Za-z0-9]+$",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "businessProfile": {
+            "type": "object",
+            "properties": {
+              "legalName": {
+                "type": "string"
+              },
+              "doingBusinessAs": {
+                "type": "string"
+              },
+              "businessType": {
+                "type": "string",
+                "enum": [
+                  "individual_sole_proprietorship",
+                  "corporation",
+                  "limited_liability_company",
+                  "partnership",
+                  "non_profit",
+                  "government"
+                ]
+              },
+              "email": {
+                "type": "string"
+              },
+              "businessPhone": {
+                "type": "string"
+              },
+              "website": {
+                "type": "string"
+              },
+              "registeredAddress": {
+                "type": "object",
+                "properties": {
+                  "line1": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "line2": {
+                    "type": "string"
+                  },
+                  "city": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "region": {
+                    "type": "string"
+                  },
+                  "postalCode": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "country": {
+                    "type": "string",
+                    "enum": [
+                      "US",
+                      "CA"
+                    ]
+                  }
+                },
+                "required": [
+                  "line1",
+                  "city",
+                  "postalCode"
+                ]
+              },
+              "defaultStatementDescriptor": {
+                "type": "string"
+              },
+              "mcc": {
+                "type": "string"
+              },
+              "ownershipType": {
+                "type": "string",
+                "enum": [
+                  "public",
+                  "private"
+                ]
+              },
+              "annualCardVolume": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "maxTransactionAmount": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "achMaxTransactionAmount": {
+                "type": "object",
+                "properties": {
+                  "amount": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991,
+                    "minimum": 0
+                  },
+                  "currency": {
+                    "description": "Supported currency code (USD, CAD)",
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 3
+                  }
+                },
+                "required": [
+                  "amount",
+                  "currency"
+                ]
+              },
+              "hasAcceptedCreditCardsPreviously": {
+                "type": "boolean"
+              },
+              "incorporationDate": {
+                "type": "object",
+                "properties": {
+                  "day": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 31
+                  },
+                  "month": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 12
+                  },
+                  "year": {
+                    "type": "integer",
+                    "minimum": 1900,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "day",
+                  "month",
+                  "year"
+                ]
+              },
+              "businessTaxId": {
+                "description": "Business tax identifier token (for example EIN). Response includes `displayDetails.last4` when persisted.",
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Basis Theory token id. Raw tax identifiers and bank account numbers are never returned on the wire."
+                  },
+                  "displayDetails": {
+                    "type": "object",
+                    "properties": {
+                      "last4": {
+                        "type": "string",
+                        "minLength": 4,
+                        "maxLength": 4,
+                        "description": "Last four digits of the tax identifier (SSN/EIN/SIN/BN suffix). Safe for UI labels such as \"**6789\". Never includes the full value."
+                      },
+                      "kind": {
+                        "description": "Tax identifier kind from Basis Theory token metadata (for example `us_ssn`, `us_ein`, `ca_sin`).",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "last4"
+                    ],
+                    "description": "Safe tax identifier display snapshot. Populated when the tax token is saved via PATCH; omitted until then."
+                  }
+                },
+                "required": [
+                  "id"
+                ]
+              }
+            },
+            "required": [
+              "legalName",
+              "businessType",
+              "email",
+              "registeredAddress"
+            ]
+          },
+          "beneficialOwners": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "firstName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "lastName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "dateOfBirth": {
+                  "type": "object",
+                  "properties": {
+                    "day": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 31
+                    },
+                    "month": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12
+                    },
+                    "year": {
+                      "type": "integer",
+                      "minimum": 1900,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "day",
+                    "month",
+                    "year"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "ownershipPercent": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "personalAddress": {
+                  "type": "object",
+                  "properties": {
+                    "line1": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "line2": {
+                      "type": "string"
+                    },
+                    "city": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "region": {
+                      "type": "string"
+                    },
+                    "postalCode": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "country": {
+                      "type": "string",
+                      "minLength": 2
+                    }
+                  },
+                  "required": [
+                    "line1",
+                    "city",
+                    "postalCode",
+                    "country"
+                  ]
+                },
+                "phone": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "taxId": {
+                  "description": "Beneficial owner tax identifier token (for example SSN). Response includes `displayDetails.last4` when persisted.",
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Basis Theory token id. Raw tax identifiers and bank account numbers are never returned on the wire."
+                    },
+                    "displayDetails": {
+                      "type": "object",
+                      "properties": {
+                        "last4": {
+                          "type": "string",
+                          "minLength": 4,
+                          "maxLength": 4,
+                          "description": "Last four digits of the tax identifier (SSN/EIN/SIN/BN suffix). Safe for UI labels such as \"**6789\". Never includes the full value."
+                        },
+                        "kind": {
+                          "description": "Tax identifier kind from Basis Theory token metadata (for example `us_ssn`, `us_ein`, `ca_sin`).",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "last4"
+                      ],
+                      "description": "Safe tax identifier display snapshot. Populated when the tax token is saved via PATCH; omitted until then."
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ]
+                }
+              },
+              "required": [
+                "firstName",
+                "lastName",
+                "dateOfBirth",
+                "ownershipPercent",
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "underwritingData": {
+            "type": "object",
+            "properties": {
+              "averageCardTransferAmount": {
+                "description": "Average card transfer amount in minor units (cents). Maps to Finix `average_card_transfer_amount`.",
+                "type": "number"
+              },
+              "averageAchTransferAmount": {
+                "description": "Average ACH transfer amount in minor units (cents). Maps to Finix `average_ach_transfer_amount`.",
+                "type": "number"
+              },
+              "annualAchVolume": {
+                "description": "Expected annual ACH volume in minor units (cents). Maps to Finix `annual_ach_volume`.",
+                "type": "number"
+              },
+              "annualCardVolume": {
+                "description": "Expected annual card volume in minor units (cents). Maps to Finix `entity.annual_card_volume`.",
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "maxTransactionAmount": {
+                "description": "Maximum single transaction amount in minor units (cents). Maps to Finix `entity.max_transaction_amount`.",
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "businessDescription": {
+                "description": "Short description of the merchant business. Maps to Finix `business_description`.",
+                "type": "string"
+              },
+              "cardVolumeDistribution": {
+                "type": "object",
+                "properties": {
+                  "cardPresentPercent": {
+                    "description": "Percentage of card volume from in-person (card-present) transactions. Required together with the other card volume fields when `cardVolumeDistribution` is set.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "ecommercePercent": {
+                    "description": "Percentage of card volume from e-commerce transactions. Required together with the other card volume fields when `cardVolumeDistribution` is set.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "mailOrderTelephonePercent": {
+                    "description": "Percentage of card volume from mail order / telephone order (MOTO) transactions. Required together with the other card volume fields when `cardVolumeDistribution` is set.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  }
+                },
+                "description": "Finix card volume by transaction type (`additional_underwriting_data.card_volume_distribution`). When provided, all three percentage fields are required and must sum to exactly 100. When omitted on submit, PayGood defaults Finix to 100% e-commerce."
+              },
+              "volumeDistributionByBusinessType": {
+                "type": "object",
+                "properties": {
+                  "businessToBusinessPercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Percentage of payment volume from business-to-business (B2B) customers. Must sum with `businessToConsumerPercent` to exactly 100."
+                  },
+                  "businessToConsumerPercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Percentage of payment volume from business-to-consumer (B2C) customers. Must sum with `businessToBusinessPercent` to exactly 100."
+                  }
+                },
+                "required": [
+                  "businessToBusinessPercent",
+                  "businessToConsumerPercent"
+                ],
+                "additionalProperties": false,
+                "description": "Finix payment volume by customer type (`additional_underwriting_data.volume_distribution_by_business_type`). Only B2B and B2C percentages are accepted on the wire today; other Finix customer-type buckets default to 0 on submit. When omitted on submit, PayGood defaults Finix to 0% B2B and 100% B2C."
+              },
+              "refundPolicy": {
+                "description": "Merchant refund policy code (for example `NO_REFUNDS`, `WITHIN_30_DAYS`). Maps to Finix `refund_policy`.",
+                "type": "string"
+              }
+            },
+            "description": "Processor underwriting fields collected during merchant onboarding. Replaced in full on each PATCH."
+          },
+          "payoutAccounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "accountType": {
+                  "type": "string",
+                  "enum": [
+                    "personal",
+                    "business"
+                  ]
+                },
+                "accountHolderName": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "vaultToken": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Basis Theory token id. Raw tax identifiers and bank account numbers are never returned on the wire."
+                    }
+                  },
+                  "required": [
+                    "id"
+                  ],
+                  "description": "Vault token reference returned on read routes (id only)."
+                },
+                "displayDetails": {
+                  "type": "object",
+                  "properties": {
+                    "last4": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "scheme": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "bankName": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "last4",
+                    "scheme"
+                  ]
+                },
+                "currency": {
+                  "description": "Supported currency code (USD, CAD)",
+                  "type": "string",
+                  "minLength": 3,
+                  "maxLength": 3
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "pending_verification",
+                    "active",
+                    "disabled"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "accountType",
+                "accountHolderName",
+                "vaultToken",
+                "displayDetails",
+                "currency",
+                "status"
+              ]
+            }
+          },
+          "processorOnboardingConsents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "merchantAgreementAccepted": {
+                  "type": "boolean"
+                },
+                "merchantAgreementIpAddress": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "merchantAgreementAcceptedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "merchantAgreementUserAgent": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "creditCheckAllowed": {
+                  "type": "boolean"
+                },
+                "creditCheckIpAddress": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "creditCheckConsentedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "nullable": true
+                },
+                "creditCheckUserAgent": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "processor",
+                "merchantAgreementAccepted",
+                "merchantAgreementIpAddress",
+                "merchantAgreementAcceptedAt",
+                "merchantAgreementUserAgent",
+                "creditCheckAllowed",
+                "creditCheckIpAddress",
+                "creditCheckConsentedAt",
+                "creditCheckUserAgent"
+              ]
+            }
+          },
+          "processorReferences": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "processor": {
+                  "type": "string",
+                  "enum": [
+                    "finix"
+                  ]
+                },
+                "referenceType": {
+                  "type": "string",
+                  "enum": [
+                    "identity",
+                    "merchant_id"
+                  ]
+                },
+                "externalId": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "processor",
+                "referenceType",
+                "externalId"
+              ]
+            }
+          }
         },
         "required": [
-          "idempotencyKey"
+          "applicationId",
+          "parentMerchantId",
+          "status",
+          "merchantId",
+          "submittedAt",
+          "approvedAt",
+          "amendmentsNote",
+          "feeProfileId",
+          "createdAt",
+          "businessProfile",
+          "beneficialOwners",
+          "underwritingData",
+          "payoutAccounts",
+          "processorOnboardingConsents",
+          "processorReferences"
         ]
       },
       "PatchBusinessProfileDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "country": {
             "type": "string",
             "enum": [
@@ -7119,12 +8568,25 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "Basis Theory token id from the client Element"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "description": "Vault provider that tokenized the sensitive data",
+                    "enum": [
+                      "basistheory"
+                    ]
+                  },
+                  "fingerprint": {
+                    "description": "Basis Theory token fingerprint from the client Element. Optional during rollout; stored when provided.",
+                    "type": "string",
+                    "minLength": 1
                   }
                 },
                 "required": [
-                  "id"
+                  "id",
+                  "provider"
                 ],
-                "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+                "description": "Vault token reference with id and provider. Fingerprint is optional but recommended when available from the Element."
               },
               "email": {
                 "type": "string"
@@ -7284,17 +8746,12 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "businessProfile"
         ]
       },
       "PatchBeneficialOwnersDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "beneficialOwners": {
             "minItems": 1,
             "type": "array",
@@ -7382,12 +8839,25 @@
                       "type": "string",
                       "minLength": 1,
                       "description": "Basis Theory token id from the client Element"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "description": "Vault provider that tokenized the sensitive data",
+                      "enum": [
+                        "basistheory"
+                      ]
+                    },
+                    "fingerprint": {
+                      "description": "Basis Theory token fingerprint from the client Element. Optional during rollout; stored when provided.",
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "id"
+                    "id",
+                    "provider"
                   ],
-                  "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+                  "description": "Vault token reference with id and provider. Fingerprint is optional but recommended when available from the Element."
                 },
                 "phone": {
                   "type": "string"
@@ -7409,17 +8879,12 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "beneficialOwners"
         ]
       },
       "PatchPayoutAccountsDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "payoutAccounts": {
             "minItems": 1,
             "type": "array",
@@ -7444,12 +8909,25 @@
                       "type": "string",
                       "minLength": 1,
                       "description": "Basis Theory token id from the client Element"
+                    },
+                    "provider": {
+                      "type": "string",
+                      "description": "Vault provider that tokenized the sensitive data",
+                      "enum": [
+                        "basistheory"
+                      ]
+                    },
+                    "fingerprint": {
+                      "description": "Basis Theory token fingerprint from the client Element. Optional during rollout; stored when provided.",
+                      "type": "string",
+                      "minLength": 1
                     }
                   },
                   "required": [
-                    "id"
+                    "id",
+                    "provider"
                   ],
-                  "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+                  "description": "Vault token reference with id and provider. Fingerprint is optional but recommended when available from the Element."
                 },
                 "currency": {
                   "description": "Supported currency code (USD, CAD)",
@@ -7468,86 +8946,120 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "payoutAccounts"
         ]
       },
       "PatchUnderwritingDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "underwritingData": {
             "type": "object",
             "properties": {
               "averageCardTransferAmount": {
+                "description": "Average card transfer amount in minor units (cents). Maps to Finix `average_card_transfer_amount`.",
                 "type": "number"
               },
               "averageAchTransferAmount": {
+                "description": "Average ACH transfer amount in minor units (cents). Maps to Finix `average_ach_transfer_amount`.",
                 "type": "number"
               },
               "annualAchVolume": {
+                "description": "Expected annual ACH volume in minor units (cents). Maps to Finix `annual_ach_volume`.",
                 "type": "number"
               },
+              "annualCardVolume": {
+                "description": "Expected annual card volume in minor units (cents). Maps to Finix `entity.annual_card_volume`.",
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
+              "maxTransactionAmount": {
+                "description": "Maximum single transaction amount in minor units (cents). Maps to Finix `entity.max_transaction_amount`.",
+                "type": "integer",
+                "exclusiveMinimum": true,
+                "maximum": 9007199254740991,
+                "minimum": 0
+              },
               "businessDescription": {
+                "description": "Short description of the merchant business. Maps to Finix `business_description`.",
                 "type": "string"
               },
               "cardVolumeDistribution": {
                 "type": "object",
                 "properties": {
                   "cardPresentPercent": {
+                    "description": "Percentage of card volume from in-person (card-present) transactions. Required together with the other card volume fields when `cardVolumeDistribution` is set.",
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 100
                   },
                   "ecommercePercent": {
+                    "description": "Percentage of card volume from e-commerce transactions. Required together with the other card volume fields when `cardVolumeDistribution` is set.",
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 100
                   },
                   "mailOrderTelephonePercent": {
+                    "description": "Percentage of card volume from mail order / telephone order (MOTO) transactions. Required together with the other card volume fields when `cardVolumeDistribution` is set.",
                     "type": "integer",
                     "minimum": 0,
                     "maximum": 100
                   }
-                }
+                },
+                "description": "Finix card volume by transaction type (`additional_underwriting_data.card_volume_distribution`). When provided, all three percentage fields are required and must sum to exactly 100. When omitted on submit, PayGood defaults Finix to 100% e-commerce."
+              },
+              "volumeDistributionByBusinessType": {
+                "type": "object",
+                "properties": {
+                  "businessToBusinessPercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Percentage of payment volume from business-to-business (B2B) customers. Must sum with `businessToConsumerPercent` to exactly 100."
+                  },
+                  "businessToConsumerPercent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Percentage of payment volume from business-to-consumer (B2C) customers. Must sum with `businessToBusinessPercent` to exactly 100."
+                  }
+                },
+                "required": [
+                  "businessToBusinessPercent",
+                  "businessToConsumerPercent"
+                ],
+                "additionalProperties": false,
+                "description": "Finix payment volume by customer type (`additional_underwriting_data.volume_distribution_by_business_type`). Only B2B and B2C percentages are accepted on the wire today; other Finix customer-type buckets default to 0 on submit. When omitted on submit, PayGood defaults Finix to 0% B2B and 100% B2C."
               },
               "refundPolicy": {
+                "description": "Merchant refund policy code (for example `NO_REFUNDS`, `WITHIN_30_DAYS`). Maps to Finix `refund_policy`.",
                 "type": "string"
               }
-            }
+            },
+            "description": "Underwriting payload stored on the merchant application and forwarded to Finix on submit."
           }
         },
         "required": [
-          "idempotencyKey",
           "underwritingData"
         ]
       },
       "SetFeeProfileOverrideDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "feeProfileId": {
             "type": "string",
             "pattern": "^FP[A-Za-z0-9]+$",
             "nullable": true
           }
-        },
-        "required": [
-          "idempotencyKey"
-        ]
+        }
       },
       "MerchantDashboardSummaryMetricsResponseDto": {
         "type": "object",
         "properties": {
           "dataPoints": {
-            "minItems": 3,
-            "maxItems": 3,
+            "minItems": 4,
+            "maxItems": 4,
             "type": "array",
             "items": {
               "type": "object",
@@ -7557,17 +9069,21 @@
                   "enum": [
                     "total_volume",
                     "transaction_count",
-                    "average_transaction_amount"
-                  ]
+                    "average_transaction_amount",
+                    "approval_rate"
+                  ],
+                  "description": "Which metric this data point represents. `total_volume`, `transaction_count`, and `average_transaction_amount` are derived from captured payments in the window. `approval_rate` is approved authorizations divided by total resolved authorization attempts (declined + approved) in the window; attempts still pending are excluded."
                 },
                 "amount": {
                   "type": "object",
                   "properties": {
                     "amount": {
-                      "type": "number"
+                      "type": "number",
+                      "description": "The metric value. For `total_volume` and `average_transaction_amount`, this is a currency amount in minor units (see `currency`). For `transaction_count`, this is a raw integer count. For `approval_rate`, this is a unitless ratio from 0 to 1 (not a percentage) — e.g. 0.9 means a 90% approval rate."
                     },
                     "currency": {
                       "type": "string",
+                      "description": "ISO currency code for money metrics, null for transaction_count (no currency) and approval_rate (unitless ratio).",
                       "nullable": true
                     }
                   },
@@ -7578,7 +9094,7 @@
                 },
                 "trend": {
                   "type": "number",
-                  "description": "Normalized change ratio from -1 to 1 for the selected window versus the previous window. Unitless ratio (not percent): 1 = +100% change, 0.5 = +50%, 0 = no change, -0.25 = -25%, -1 = -100%."
+                  "description": "Normalized change ratio from -1 to 1 for the selected window versus the previous window. Unitless ratio (not percent): 1 = +100% change, 0.5 = +50%, 0 = no change, -0.25 = -25%, -1 = -100%. For approval_rate, this is the change in the ratio itself (current rate minus previous rate, normalized), not a change in percentage points."
                 }
               },
               "required": [
@@ -7591,6 +9107,310 @@
         },
         "required": [
           "dataPoints"
+        ]
+      },
+      "ListMerchantSupportTicketsResponseDto": {
+        "type": "object",
+        "properties": {
+          "tickets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "open",
+                    "pending",
+                    "resolved",
+                    "closed"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                }
+              },
+              "required": [
+                "id",
+                "subject",
+                "status",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "tickets"
+        ]
+      },
+      "GetMerchantSupportTicketResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending",
+              "resolved",
+              "closed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "description": {
+            "type": "string"
+          },
+          "messages": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Freshdesk conversation id for this reply. Distinct from the ticket id."
+                },
+                "body": {
+                  "type": "string",
+                  "description": "Plain-text conversation body returned from Freshdesk."
+                },
+                "authorType": {
+                  "type": "string",
+                  "enum": [
+                    "requester",
+                    "agent",
+                    "system"
+                  ],
+                  "description": "Who authored the message. Dashboard replies are always `requester`. `agent` is a Freshdesk agent reply. `system` is a private Freshdesk note."
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                  "description": "ISO-8601 timestamp when Freshdesk recorded the conversation."
+                }
+              },
+              "required": [
+                "id",
+                "body",
+                "authorType",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "id",
+          "subject",
+          "status",
+          "createdAt",
+          "updatedAt",
+          "description",
+          "messages"
+        ]
+      },
+      "CreateMerchantSupportTicketBodyDto": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "Support ticket subject shown in Freshdesk (max 255 characters)."
+          },
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Initial ticket message body as plain text (max 10,000 characters)."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "Troubleshooting",
+              "Onboarding",
+              "Feature Request"
+            ],
+            "description": "Freshdesk ticket category mapped to `cf_type`. Allowed: Troubleshooting, Onboarding, Feature Request."
+          },
+          "subtype": {
+            "description": "Freshdesk ticket subcategory mapped to `cf_sub_type`. Required when `type` is `Troubleshooting`. Allowed: Error Message, Technical, Integration. Ignored for Onboarding and Feature Request.",
+            "type": "string",
+            "enum": [
+              "Error Message",
+              "Technical",
+              "Integration"
+            ]
+          }
+        },
+        "required": [
+          "subject",
+          "body",
+          "type"
+        ],
+        "additionalProperties": false
+      },
+      "CreateMerchantSupportTicketResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "pending",
+              "resolved",
+              "closed"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "id",
+          "subject",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReplyMerchantSupportTicketBodyDto": {
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "Reply message body as plain text (1–10,000 characters after trim). HTML is escaped before sending to Freshdesk. Attachments are not supported."
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "additionalProperties": false
+      },
+      "ReplyMerchantSupportTicketResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Freshdesk conversation id for this reply. Distinct from the ticket id."
+          },
+          "body": {
+            "type": "string",
+            "description": "Plain-text conversation body returned from Freshdesk."
+          },
+          "authorType": {
+            "type": "string",
+            "enum": [
+              "requester",
+              "agent",
+              "system"
+            ],
+            "description": "Who authored the message. Dashboard replies are always `requester`. `agent` is a Freshdesk agent reply. `system` is a private Freshdesk note."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+            "description": "ISO-8601 timestamp when Freshdesk recorded the conversation."
+          }
+        },
+        "required": [
+          "id",
+          "body",
+          "authorType",
+          "createdAt"
+        ]
+      },
+      "ProvisionMerchantSupportLinkBodyDto": {
+        "type": "object",
+        "properties": {
+          "externalOrgId": {
+            "description": "Existing Freshdesk company id. When omitted, a new Freshdesk company is created.",
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProvisionMerchantSupportLinkResponseDto": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "vendor": {
+            "type": "string",
+            "minLength": 1
+          },
+          "externalOrgId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "provisioned",
+              "linked",
+              "unchanged"
+            ]
+          }
+        },
+        "required": [
+          "merchantId",
+          "vendor",
+          "externalOrgId",
+          "action"
         ]
       },
       "MerchantDashboardApiKeysResponseDto": {
@@ -7749,10 +9569,6 @@
       "UpdateDashboardPayoutAccountBodyDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "accountOwnerType": {
             "type": "string",
             "enum": [
@@ -7776,12 +9592,25 @@
                 "type": "string",
                 "minLength": 1,
                 "description": "Basis Theory token id from the client Element"
+              },
+              "provider": {
+                "type": "string",
+                "description": "Vault provider that tokenized the sensitive data",
+                "enum": [
+                  "basistheory"
+                ]
+              },
+              "fingerprint": {
+                "description": "Basis Theory token fingerprint from the client Element. Optional during rollout; stored when provided.",
+                "type": "string",
+                "minLength": 1
               }
             },
             "required": [
-              "id"
+              "id",
+              "provider"
             ],
-            "description": "Vault token reference. Send the Basis Theory token id only; provider is inferred server-side."
+            "description": "Vault token reference with id and provider. Fingerprint is optional but recommended when available from the Element."
           },
           "currency": {
             "description": "Supported currency code (USD, CAD)",
@@ -7791,7 +9620,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "accountOwnerType",
           "accountHolderName",
           "vaultToken"
@@ -7881,10 +9709,6 @@
       "CreateMerchantApiKeyDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "label": {
             "type": "string",
             "minLength": 1,
@@ -7907,7 +9731,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "label",
           "accessMode"
         ]
@@ -7994,18 +9817,6 @@
           "apiKey"
         ]
       },
-      "RevokeMerchantApiKeyDto": {
-        "type": "object",
-        "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "idempotencyKey"
-        ]
-      },
       "RevokeMerchantApiKeyResponseDto": {
         "type": "object",
         "properties": {
@@ -8037,10 +9848,6 @@
       "CreateMerchantInvitationDto": {
         "type": "object",
         "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          },
           "email": {
             "type": "string",
             "format": "email",
@@ -8060,7 +9867,6 @@
           }
         },
         "required": [
-          "idempotencyKey",
           "email",
           "role"
         ]
@@ -8266,18 +10072,6 @@
         "required": [
           "items",
           "page"
-        ]
-      },
-      "RevokeMerchantInvitationDto": {
-        "type": "object",
-        "properties": {
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
-          }
-        },
-        "required": [
-          "idempotencyKey"
         ]
       },
       "MerchantInvitationResponseDto": {
@@ -8508,15 +10302,10 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 32
-          },
-          "idempotencyKey": {
-            "type": "string",
-            "minLength": 1
           }
         },
         "required": [
-          "referralCode",
-          "idempotencyKey"
+          "referralCode"
         ]
       },
       "MerchantReferralResponseDto": {
@@ -8680,6 +10469,53 @@
         "required": [
           "code",
           "displayName"
+        ]
+      },
+      "SendWeeklyPlatformSummaryBodyDto": {
+        "type": "object",
+        "properties": {
+          "startDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendWeeklyPlatformSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "sentAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "correlationId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "weekStart": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "weekEnd": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          }
+        },
+        "required": [
+          "sentAt",
+          "correlationId",
+          "weekStart",
+          "weekEnd"
         ]
       }
     }
