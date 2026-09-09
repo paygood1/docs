@@ -2208,6 +2208,89 @@
         ]
       }
     },
+    "/invoices/{id}/notification-emails": {
+      "patch": {
+        "description": "Replaces the full list of extra addresses notified alongside the customer when this invoice is issued or paid. Allowed on draft, issued, and partially paid invoices; send an empty array to clear the list. No idempotency key: replacing the list with the same value twice is a no-op.",
+        "operationId": "InvoicesController_updateNotificationEmails",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Invoice TypeID (`inv_...`) to update.",
+            "schema": {
+              "example": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Replacement payload with merchant scope and email list.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateInvoiceNotificationEmailsDto"
+              },
+              "examples": {
+                "addAccountingContact": {
+                  "summary": "Notify an accounting inbox in addition to the customer",
+                  "value": {
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "additionalNotificationEmails": [
+                      "accounting@merchant.example"
+                    ]
+                  }
+                },
+                "clearList": {
+                  "summary": "Clear the list",
+                  "value": {
+                    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+                    "additionalNotificationEmails": []
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification emails updated successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed, too many addresses, or the invoice is paid or void."
+          },
+          "401": {
+            "description": "Missing or invalid authentication credentials."
+          },
+          "403": {
+            "description": "Authenticated principal lacks `invoices.update` capability or merchant scope."
+          },
+          "404": {
+            "description": "Invoice was not found for the provided merchant scope."
+          },
+          "409": {
+            "description": "Invoice changed while this request was in flight. Re-read the invoice and retry."
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Replace an invoice's additional notification emails",
+        "tags": [
+          "invoices"
+        ]
+      }
+    },
     "/invoices/{id}/void": {
       "post": {
         "description": "Manually transitions a draft or issued invoice to void for the provided merchant scope. This endpoint is idempotent by idempotency key per invoice.",
@@ -4591,6 +4674,22 @@
           "merchantId"
         ]
       },
+      "CreateDashboardProductDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      },
       "CreateInvoiceDto": {
         "type": "object",
         "properties": {
@@ -4700,6 +4799,28 @@
           "metadata": {
             "type": "object",
             "additionalProperties": {}
+          },
+          "acceptedPaymentMethods": {
+            "description": "Which payment method types checkout may offer for this invoice. Defaults to allowing both when omitted.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "card",
+                "bank_account"
+              ]
+            }
+          },
+          "additionalNotificationEmails": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            },
+            "description": "Extra addresses notified alongside the customer when this invoice is issued or paid. Max 10."
           }
         },
         "required": [
@@ -4953,6 +5074,25 @@
             "type": "object",
             "additionalProperties": {}
           },
+          "acceptedPaymentMethods": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "card",
+                "bank_account"
+              ]
+            },
+            "description": "Which payment method types checkout may offer for this invoice."
+          },
+          "additionalNotificationEmails": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            }
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time",
@@ -4979,6 +5119,8 @@
           "total",
           "amountPaid",
           "amountRemaining",
+          "acceptedPaymentMethods",
+          "additionalNotificationEmails",
           "createdAt",
           "updatedAt"
         ]
@@ -5093,6 +5235,18 @@
           "changeReason": {
             "type": "string",
             "maxLength": 1000
+          },
+          "acceptedPaymentMethods": {
+            "description": "Which payment method types checkout may offer for this invoice. Omit to leave unchanged.",
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "card",
+                "bank_account"
+              ]
+            }
           }
         },
         "required": [
@@ -5372,6 +5526,25 @@
                 "type": "object",
                 "additionalProperties": {}
               },
+              "acceptedPaymentMethods": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "card",
+                    "bank_account"
+                  ]
+                },
+                "description": "Which payment method types checkout may offer for this invoice."
+              },
+              "additionalNotificationEmails": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "email",
+                  "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                }
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time",
@@ -5398,6 +5571,8 @@
               "total",
               "amountPaid",
               "amountRemaining",
+              "acceptedPaymentMethods",
+              "additionalNotificationEmails",
               "createdAt",
               "updatedAt"
             ]
@@ -5761,6 +5936,29 @@
           "merchantId"
         ]
       },
+      "UpdateInvoiceNotificationEmailsDto": {
+        "type": "object",
+        "properties": {
+          "merchantId": {
+            "type": "string",
+            "description": "Merchant TypeID (`mer_...`) used for authorization scope."
+          },
+          "additionalNotificationEmails": {
+            "maxItems": 10,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email",
+              "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            },
+            "description": "Full replacement list of extra addresses to notify. Send an empty array to clear it."
+          }
+        },
+        "required": [
+          "merchantId",
+          "additionalNotificationEmails"
+        ]
+      },
       "VoidInvoiceDto": {
         "type": "object",
         "properties": {
@@ -6021,6 +6219,25 @@
                   "type": "object",
                   "additionalProperties": {}
                 },
+                "acceptedPaymentMethods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "card",
+                      "bank_account"
+                    ]
+                  },
+                  "description": "Which payment method types checkout may offer for this invoice."
+                },
+                "additionalNotificationEmails": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  }
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -6047,6 +6264,8 @@
                 "total",
                 "amountPaid",
                 "amountRemaining",
+                "acceptedPaymentMethods",
+                "additionalNotificationEmails",
                 "createdAt",
                 "updatedAt"
               ]
@@ -6522,6 +6741,25 @@
                   "type": "object",
                   "additionalProperties": {}
                 },
+                "acceptedPaymentMethods": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "card",
+                      "bank_account"
+                    ]
+                  },
+                  "description": "Which payment method types checkout may offer for this invoice."
+                },
+                "additionalNotificationEmails": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  }
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time",
@@ -6553,6 +6791,8 @@
                 "total",
                 "amountPaid",
                 "amountRemaining",
+                "acceptedPaymentMethods",
+                "additionalNotificationEmails",
                 "createdAt",
                 "updatedAt",
                 "checkoutUrl"
@@ -6783,6 +7023,17 @@
                 "type": "string",
                 "format": "date-time",
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "acceptedPaymentMethods": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "card",
+                    "bank_account"
+                  ]
+                }
               }
             },
             "required": [
@@ -6792,7 +7043,8 @@
               "currency",
               "lineItems",
               "total",
-              "amountRemaining"
+              "amountRemaining",
+              "acceptedPaymentMethods"
             ]
           }
         },
@@ -6994,6 +7246,17 @@
                 "type": "string",
                 "format": "date-time",
                 "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              "acceptedPaymentMethods": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "card",
+                    "bank_account"
+                  ]
+                }
               }
             },
             "required": [
@@ -7003,7 +7266,8 @@
               "currency",
               "lineItems",
               "total",
-              "amountRemaining"
+              "amountRemaining",
+              "acceptedPaymentMethods"
             ]
           }
         },
