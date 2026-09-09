@@ -16,21 +16,34 @@ This guide walks you through the full invoice lifecycle: create a draft, revise 
 
     ```bash
     curl -X POST https://api.paygood.co/invoices \
-      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "idempotencyKey": "idem-inv-01",
-        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-        "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
-        "currency": "usd",
-        "lineItems": [
-          {
-            "kind": "manual_adjustment",
-            "description": "Sales tax",
-            "amount": 1300
-          }
-        ]
-      }'
+          -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+          -H 'Content-Type: application/json' \
+          -H 'Idempotency-Key: idem-inv-01' \
+          -d '{
+            "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+            "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+            "currency": "USD",
+            "lineItems": [
+              {
+                "kind": "product_charge",
+                "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+                "description": "Consulting package",
+                "quantity": 1,
+                "unitAmount": 10000
+              },
+              {
+                "kind": "manual_adjustment",
+                "description": "Sales tax",
+                "amount": 800
+              }
+            ],
+            "dueDate": "2026-10-15T00:00:00.000Z",
+            "acceptedPaymentMethods": ["card"],
+            "metadata": {
+              "orderId": "ord_123",
+              "source": "campaign-ad-123"
+            }
+          }'
     ```
 
     Save the returned invoice `id` (`inv_...`) for use in later steps.
@@ -39,23 +52,25 @@ This guide walks you through the full invoice lifecycle: create a draft, revise 
     Draft invoices can be updated with `PUT /invoices/{id}`. Each successful update appends an entry to the invoice's revision history. Send the full line item snapshot you want on the invoice, not just the changes.
 
     ```bash
-    curl -X PUT https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va \
-      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "idempotencyKey": "idem-inv-01-rev-1",
-        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-        "lineItems": [
-          {
-            "kind": "product_charge",
-            "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
-            "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2f1",
-            "description": "Monthly subscription",
-            "quantity": 3,
-            "unitAmount": 2500
-          }
-        ]
-      }'
+    curl -X PUT
+      https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va \
+        -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+        -H 'Content-Type: application/json' \
+        -H 'Idempotency-Key: idem-inv-01-rev-1' \
+        -d '{
+          "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+          "currency": "USD",
+          "lineItems": [
+            {
+              "kind": "product_charge",
+              "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+              "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2f1",
+              "description": "Monthly subscription",
+              "quantity": 3
+            }
+          ],
+          "changeReason": "Customer upgraded to 3 seats"
+        }'
     ```
   </Step>
   <Step title="Mark the invoice as paid">
