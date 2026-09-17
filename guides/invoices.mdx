@@ -73,17 +73,73 @@ This guide walks you through the full invoice lifecycle: create a draft, revise 
         }'
     ```
   </Step>
+  <Step title="Send the invoice">
+    Once the invoice is ready, call the `send` endpoint for it to be emailed to the customer and ready to be paid:
+
+    ```shellscript
+    curl -X POST
+        https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va/send \                                                                 -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+          -H 'Content-Type: application/json' \
+          -H 'Idempotency-Key: idem-inv-01-send-1' \
+          -d '{
+            "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
+          }'
+    ```
+
+    Response:
+
+    ```json
+    {
+            "invoiceId": "inv_01hxy8m1nqk9g3x3y3p0azq2va",
+            "invoiceNumber": "INV-000417",
+            "invoiceUrlSlug": "invoice-8f2ca1-inv-000417",
+            "idempotencyKey": "idem-inv-01",
+            "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+            "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2cu",
+            "currentRevisionNumber": 1,
+            "status": "issued",
+            "currency": "USD",
+            "lineItems": [
+              {
+                "kind": "product_charge",
+                "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
+                "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2f1",
+                "description": "Monthly subscription",
+                "quantity": 3,
+                "unitAmount": 2000,
+                "lineTotal": 6000
+              }
+            ],
+            "productTotal": { "amount": 6000, "currency": "USD" },
+            "total": { "amount": 6000, "currency": "USD" },
+            "amountPaid": { "amount": 0, "currency": "USD" },
+            "amountRemaining": { "amount": 6000, "currency": "USD" },
+            "dueDate": "2026-10-17T00:00:00.000Z",
+            "notes": null,
+            "metadata": {},
+            "acceptedPaymentMethods": ["card", "bank_account"],
+            "additionalNotificationEmails": [],
+            "createdAt": "2026-09-10T14:32:01.000Z",
+            "updatedAt": "2026-09-17T22:14:28.000Z",
+            "checkoutUrl": "https://checkout.paygood.co/invoices/invoice-8f2ca1-inv-000417"
+          }
+    ```
+  </Step>
   <Step title="Mark the invoice as paid">
-    Once the customer has paid outside of PayGood (for example, by ACH or check), transition the invoice to paid with `POST /invoices/{id}/mark-paid`.
+    If the customer has paid outside of PayGood (for example, by ACH or check), transition the invoice to paid with `POST /invoices/{id}/mark-paid`.
 
     ```bash
-    curl -X POST https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq2va/mark-paid \
-      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "idempotencyKey": "idem-inv-01-paid",
-        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"
-      }'
+    curl -X POST https://api.paygood.co/invoices/inv_01hxy8m1nqk9g3x3y3p0azq
+      2va/out-of-band-payments \
+        -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
+        -H 'Content-Type: application/json' \
+        -H 'Idempotency-Key: idem-inv-01-oob-1' \
+        -d '{
+          "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+          "method": "check",
+          "amount": 20000,
+          "reference": "Check #1042"
+        }'
     ```
   </Step>
   <Step title="Void an invoice">
