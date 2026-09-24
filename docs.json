@@ -27,7 +27,9 @@
               "guides/first-payment",
               "guides/manage-customers",
               "guides/payment-instruments",
-              "guides/invoices"
+              "guides/invoices",
+              "webhooks",
+              "webhooks"
             ]
           },
           {

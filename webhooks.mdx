@@ -1,0 +1,217 @@
+---
+title: "Webhooks"
+---
+
+## Overview
+
+Webhooks let you receive real-time notifications when events happen on your account — for example, when a payment succeeds or a payout is sent. Each delivery is a signed HTTP `POST` request sent to a URL you register.
+
+## Registering a webhook endpoint
+
+<Tabs>
+  <Tab title="Dashboard">
+    <Steps>
+      <Step title="Go to Webhooks settings">
+        In the [Dashboard](https://dashboard.example.com), navigate to **Settings → Webhooks**.
+      </Step>
+      <Step title="Add an endpoint">
+        Click **Add endpoint** and enter the HTTPS URL that should receive events.
+      </Step>
+      <Step title="Select event types">
+        Choose which event types to subscribe to (see [Event types](#event-types) below).
+      </Step>
+      <Step title="Save your signing secret">
+        On creation, we show you a **signing secret** (`whsec_...`). Copy it immediately — it's only ever shown once and is required to verify deliveries.
+      </Step>
+    </Steps>
+  </Tab>
+  <Tab title="API">
+    You can also register an endpoint programmatically:
+
+    ```bash
+    curl -X POST https://api.paygood.co/merchants/{merchantId}/webhook-endpoints \
+      -H "Authorization: Bearer {api_key}" \
+      -H "Content-Type: application/json" \
+      -d '{
+        "url": "https://yourapp.com/webhooks/example",
+        "name": "Production",
+        "eventTypes": ["payments.PaymentCreated", "payouts.PayoutSent"]
+      }'
+    ```
+
+    <ResponseField name="webhookEndpointId" type="string">
+      TypeID, e.g. `whk_...`
+    </ResponseField>
+
+    <ResponseField name="url" type="string">
+    </ResponseField>
+
+    <ResponseField name="name" type="string | null">
+    </ResponseField>
+
+    <ResponseField name="status" type="string">
+      `ACTIVE` or `DISABLED`
+    </ResponseField>
+
+    <ResponseField name="eventTypes" type="string[]">
+    </ResponseField>
+
+    <ResponseField name="signingSecret" type="string">
+      Plaintext secret, returned **only on this create call** — not returned by any later read.
+    </ResponseField>
+
+    <ResponseField name="createdAt" type="string">
+    </ResponseField>
+
+    <ResponseField name="updatedAt" type="string">
+    </ResponseField>
+  </Tab>
+</Tabs>
+
+### Event types
+
+Subscribe to any of the following:
+
+| Event type | Description |
+| --- | --- |
+| `payments.PaymentCreated` | A payment was created |
+| `payments.PaymentDeclined` | A payment was declined |
+| `payments.PaymentRefunded` | A payment was refunded |
+| `payments.PaymentReturned` | A payment was returned - only applicable for ACH bank payments |
+| `payouts.PayoutCreated` | A payout was created |
+| `payouts.PayoutSent` | A payout was sent |
+| `payouts.PayoutFailed` | A payout failed |
+| `invoices.InvoiceSent` | An invoice was sent |
+| `invoices.InvoicePaid` | An invoice was paid |
+
+## Signing secrets
+
+Every webhook endpoint has a signing secret in the form `whsec_...`, used to compute the HMAC signature on each delivery.
+
+<Warning>
+  Your signing secret is shown **exactly once**, at creation (or right after rotation). We store it encrypted and cannot display it again — if you lose it, rotate to get a new one.
+</Warning>
+
+To rotate a secret (e.g. if it's been exposed), call the rotate endpoint or use **Settings → Webhooks → [endpoint] → Rotate secret** in the Dashboard. Rotating immediately replaces the secret used for all future deliveries; it does not affect past delivery history.
+
+```bash
+curl -X POST https://api.paygood.co/merchants/{merchantId}/webhook-endpoints/{webhookEndpointId}/rotate-secret \
+  -H "Authorization: Bearer {api_key}"
+```
+
+## Verifying webhooks
+
+Every delivery includes three headers and a JSON body:
+
+<table>
+  <colgroup>
+    <col width="232" />
+    <col width="474" />
+  </colgroup>
+  <thead>
+    <tr>
+      <th>Header</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>`Merchant-Webhook-Id`</td>
+      <td>Unique ID for this delivery</td>
+    </tr>
+    <tr>
+      <td>`Merchant-Webhook-Timestamp`</td>
+      <td>Unix timestamp (seconds) the delivery was sent</td>
+    </tr>
+    <tr>
+      <td>`Merchant-Webhook-Signature`</td>
+      <td>`v1=<hex-encoded HMAC-SHA256 signature>`. May contain multiple space-separated `v1=`</td>
+    </tr>
+  </tbody>
+</table>
+
+```json Delivery body
+{
+  "id": "del_...",
+  "type": "payments.PaymentCreated",
+  "createdAt": "2026-09-24T12:00:00.000Z",
+  "data": { ... }
+}
+mdx
+```
+
+<Note>
+  `data` only ever contains an explicit allowlisted set of fields for each event — never raw card numbers, bank/routing numbers, or vault tokens.
+</Note>
+
+### Verification steps
+
+1. Build the signed content string by joining with periods: `{Merchant-Webhook-Id}.{Merchant-Webhook-Timestamp}.{raw
+     request body}`. You must use the **raw body bytes**, not a re-serialized version of the parsed JSON — key ordering/whitespace differences will break the signature.
+2. Compute `HMAC-SHA256(signed_content, your_signing_secret)`, hex-encoded.
+3. Compare it, using a constant-time comparison, against the value(s) after `v1=` in `Merchant-Webhook-Signature`.
+4. Reject the delivery if `abs(now - timestamp) > 5 minutes`, to protect against replay attacks.
+
+```js Node.js
+const crypto = require('crypto');
+
+function verifyWebhookSignature({ rawBody, headers, signingSecret, toleranceSeconds = 300 }) {
+  const deliveryId = headers['merchant-webhook-id'];
+  const timestamp = headers['merchant-webhook-timestamp'];
+  const signatureHeader = headers['merchant-webhook-signature'];
+
+    throw new Error('Missing required webhook headers');
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (Math.abs(now - Number(timestamp)) > toleranceSeconds) {
+    throw new Error('Webhook timestamp outside tolerance window');
+  }
+
+  const signedContent = `${deliveryId}.${timestamp}.${rawBody}`;
+  const expectedSig = crypto
+    .createHmac('sha256', signingSecret)
+    .update(signedContent, 'utf8')
+    .digest('hex');
+
+  const providedSigs = signatureHeader
+    .split(' ')
+    .filter((s) => s.startsWith('v1='))
+    .map((s) => s.slice('v1='.length));
+
+  const isValid = providedSigs.some((sig) => {
+    const a = Buffer.from(sig, 'hex');
+    const b = Buffer.from(expectedSig, 'hex');
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  });
+
+  if (!isValid) throw new Error('Invalid webhook signature');
+  return true;
+}
+
+// Express example — must use the raw body, not express.json()
+app.post(
+  '/webhooks/example',
+  express.raw({ type: 'application/json' }),
+  (req, res) => {
+    const rawBody = req.body.toString('utf8');
+    try {
+      verifyWebhookSignature({
+        rawBody,
+        headers: req.headers,
+        signingSecret: process.env.WEBHOOK_SIGNING_SECRET,
+      });
+    } catch (err) {
+      return res.status(400).send(`Webhook verification failed: ${err.message}`);
+    }
+
+    const event = JSON.parse(rawBody);
+    // ... handle event
+    res.sendStatus(200);
+  }
+);
+```
+
+<Tip>
+  Always respond with a `2xx` status once you've received and verified the event, before doing slow processing — handle the event asynchronously if it takes time.
+</Tip>
