@@ -29,14 +29,8 @@
               "guides/payment-instruments",
               "guides/invoices",
               "webhooks",
-              "subscriptions",
-              "webhooks"
-            ]
-          },
-          {
-            "group": "Merchant Onboarding",
-            "pages": [
-              "guides/merchant-onboarding-overview"
+              "webhooks",
+              "subscriptions"
             ]
           }
         ]

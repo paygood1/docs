@@ -1,0 +1,284 @@
+---
+title: "Webhooks"
+---
+
+Webhooks let your integration react in real time to events that happen on your merchant account (a payment succeeding, an invoice getting paid) — without polling the API.
+
+You register one or more **webhook endpoints**, each subscribed to a specific set of event types. When a matching event occurs, we send an HTTP `POST` request with the event payload to your endpoint.
+
+<Note>
+  There is no "subscribe to everything" option. Every endpoint must list the specific event types it wants — this keeps your integration explicit about what it depends on.
+</Note>
+
+## Registering a webhook endpoint
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.paygood.com/merchants/{merchant_id}/webhook-endpoints \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: a-unique-key-for-this-request" \
+  -d '{
+    "url": "https://example.com/webhooks/paygood",
+    "name": "Production endpoint",
+    "eventTypes": ["payments.PaymentCreated", "payments.PaymentDeclined"]
+  }'
+```
+
+</CodeGroup>
+
+### Request
+
+<ParamField body="url" type="string" required>
+  The HTTPS URL we'll deliver events to. Must use `https://` — plain `http://` endpoints are rejected. The destination must also resolve to a public IP address; private, loopback, and link-local addresses are refused when we attempt delivery.
+</ParamField>
+
+<ParamField body="name" type="string">
+  An optional label for the endpoint (1–100 characters), useful when you have more than one.
+</ParamField>
+
+<ParamField body="eventTypes" type="string[]" required>
+  One to 50 event type strings to subscribe to. See [Event types](#event-types) below for the full list. Requests referencing an unrecognized or ineligible event type are rejected with a 400.
+</ParamField>
+
+<Note>
+  All mutating requests (create, update, delete, rotate secret) require an `Idempotency-Key` header, consistent with the rest of the API. Retried requests with the same key return the original result rather than creating a duplicate.
+</Note>
+
+### Response
+
+<ResponseField name="webhookEndpointId" type="string">
+  Unique identifier for the endpoint, e.g. `whk_2sB...`.
+</ResponseField>
+
+<ResponseField name="merchantId" type="string">
+</ResponseField>
+
+<ResponseField name="url" type="string">
+</ResponseField>
+
+<ResponseField name="name" type="string">
+</ResponseField>
+
+<ResponseField name="status" type="string">
+  One of `active`, `disabled`, `deleted`.
+</ResponseField>
+
+<ResponseField name="eventTypes" type="string[]">
+</ResponseField>
+
+<ResponseField name="signingSecret" type="string">
+  The secret used to sign deliveries to this endpoint, e.g. `whsec_...`.
+
+  <Warning>
+    This is the **only time** the signing secret is returned in plaintext — on creation, and again if you rotate it. Store it securely; it can't be retrieved again afterward. If you lose it, rotate the secret to get a new one.
+  </Warning>
+</ResponseField>
+
+<ResponseField name="createdAt" type="string">
+</ResponseField>
+
+<ResponseField name="updatedAt" type="string">
+</ResponseField>
+
+```json Response
+{
+  "webhookEndpointId": "whk_2sB4x9k1cQeZ3n7fW8dRtY",
+  "merchantId": "mer_1aB2c3D4e5F6g7H8i9J0kL",
+  "url": "https://example.com/webhooks/paygood",
+  "name": "Production endpoint",
+  "status": "active",
+  "eventTypes": ["payments.PaymentCreated", "payments.PaymentDeclined"],
+  "signingSecret": "whsec_9kX2mQ7pL4vR8sT1uW6yZ3nB0cD5eF",
+  "createdAt": "2026-09-27T14:32:10.000Z",
+  "updatedAt": "2026-09-27T14:32:10.000Z"
+}
+```
+
+## Event types
+
+Only the event types below can be subscribed to today. Requesting any other event type returns a `400`.
+
+| Event type | Fired when… | Payload fields |
+| --- | --- | --- |
+| `payments.PaymentCreated` | A payment is created | `paymentId`, `paymentInstrumentId`, `priceId`, `processor`, |
+| `customerId`, `merchantId`, `amount`, `currency`, `occurredAt` |  |  |
+| `payments.PaymentDeclined` | A payment attempt is declined | `paymentId`, `merchantId`, `processor`, `declineCode`, |
+| `declineMessage`, `occurredAt` |  |  |
+| `payments.PaymentRefunded` | A payment is refunded | `refundId`, `paymentId`, `merchantId`, `refundedAmount`, `currency`, `processorReferenceId`, `occurredAt` |
+| `payments.PaymentReturned` | A payment is returned (e.g. ACH return) | `returnId`, `paymentId`, `merchantId`, `returnedAmount`, `currency`, `processorReferenceId`, `occurredAt` |
+| `payouts.PayoutCreated` | A payout is created | `payoutId`, `merchantId`, `payoutAccountId`, `processor`, `grossAmount`, `feeAmount`, `netAmount`, `currency`, `occurredAt` |
+| `invoices.InvoiceSent` | An invoice is sent (or resent) | `invoiceId`, `merchantId`, `customerId`, `invoiceNumber`,`resend`, `occurredAt` |
+| `invoices.InvoicePaid` | An invoice is paid in full | `invoiceId`, `merchantId`, `customerId`, `invoiceNumber`, `amount`,`currency`, `paidAt` |
+
+<Note>
+  More event types are planned. If there's a specific one you need, let us know.
+</Note>
+
+## Delivery format
+
+Every delivery is an HTTP `POST` with a JSON body shaped like this:
+
+```json
+{
+  "id": "whkdel_8pQ3rT6vX1zC5aB9dE2fG4hJ",
+  "type": "payments.PaymentCreated",
+  "createdAt": "2026-09-27T14:35:02.000Z",
+  "data": {
+    "paymentId": "pay_...",
+    "paymentInstrumentId": "pmi_...",
+    "priceId": "prc_...",
+    "processor": "finix",
+    "customerId": "cus_...",
+    "merchantId": "mer_...",
+    "amount": 4999,
+    "currency": "USD",
+    "occurredAt": "2026-09-27T14:35:01.500Z"
+  }
+}
+```
+
+Along with these headers on every request:
+
+| Header | Description |
+| --- | --- |
+| `Merchant-Webhook-Id` | The delivery ID (also present as `id` in the body). Use it to deduplicate if you ever receive the |
+| `Merchant-Webhook-Timestamp` | Unix timestamp (seconds) of the send attempt. |
+| `Merchant-Webhook-Signature` | The HMAC signature — see [Verifying signatures](#verifying-signatures). |
+
+<Warning>
+  Delivery order is best-effort and **not guaranteed** across events, even for the same resource. Use the `id` and `occurredAt`/timestamp fields in the payload to reconcile state rather than assuming events arrive in order.
+</Warning>
+
+## Verifying signatures
+
+Each delivery is signed with the endpoint's signing secret so you can verify it genuinely came from us and wasn't tampered with in transit.
+
+The signature header looks like:
+
+```text
+Merchant-Webhook-Signature: v1=6401d585e0d121ac2d91c3635c85946ac2faa3b18eff32ae538089a04b66097a
+```
+
+To verify it:
+
+1. Take the **raw, unparsed** request body bytes — don't re-serialize a parsed JSON object, since re-serialization can change byte-for-byte formatting and break the signature check. 2. Build the signed content string: `{Merchant-Webhook-Id}.{Merchant-Webhook-Timestamp}.{raw body}` 3. Compute `HMAC-SHA256` of that string using your endpoint's signing secret, hex-encoded. 4. Compare it (using a constant-time comparison) against the value after `v1=` in the `Merchant-Webhook-Signature` header. 5. Reject the request if the timestamp is more than 5 minutes old, to guard against replay attacks.
+
+<CodeGroup>
+
+```js Node.js
+const crypto = require('crypto');
+
+function verifyWebhookSignature({ rawBody, id, timestamp, signatureHeader, secret }) {
+  const signedContent = `${id}.${timestamp}.${rawBody}`;
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(signedContent)
+    .digest('hex');
+
+  const provided = signatureHeader
+    .split(' ')
+    .find((v) => v.startsWith('v1='))
+    ?.slice(3);
+
+  if (!provided) return false;
+
+  return crypto.timingSafeEqual(
+    Buffer.from(expected, 'hex'),
+    Buffer.from(provided, 'hex'),
+  );
+}
+```
+
+```python Python
+import hmac
+import hashlib
+
+def verify_webhook_signature(raw_body: bytes, delivery_id: str, timestamp: str, signature_header: str, secret: str) -> bool:
+    signed_content = f"{delivery_id}.{timestamp}.{raw_body.decode()}"
+    expected = hmac.new(secret.encode(), signed_content.encode(), hashlib.sha256).hexdigest()
+
+    for value in signature_header.split(" "):
+        if value.startswith("v1="):
+            provided = value[3:]
+            if hmac.compare_digest(expected, provided):
+                return True
+    return False
+```
+
+</CodeGroup>
+
+<Accordion title="Worked example">
+  Given: - Secret: `whsec_test_secret` - `Merchant-Webhook-Id`: `whkdel_test123` - `Merchant-Webhook-Timestamp`: `1700000000` - Raw body: `{"id":"whkdel_test123","type":"payments.PaymentCreated"}`
+
+  The signed content is:
+
+  ```text
+  whkdel_test123.1700000000.{"id":"whkdel_test123","type":"payments.PaymentCreated"}
+  ```
+
+  Which produces:
+
+  ```text
+  v1=6401d585e0d121ac2d91c3635c85946ac2faa3b18eff32ae538089a04b66097a
+  ```
+
+  Use this to sanity-check your own implementation before going live.
+</Accordion>
+
+## Retries and delivery status
+
+<Note>
+  Your endpoint should respond with a `2xx` status code as quickly as possible. Do your event processing asynchronously and return a `200` immediately — we treat any non-2xx response, a timeout, or a connection error as a failed attempt.
+</Note>
+
+- **Timeout:** we wait up to 10 seconds for a response. - **Retries:** up to 5 attempts total, with a fixed 60-second delay between attempts (so the full retry window is a few minutes, not hours or days). - **After the final attempt** fails, the delivery is marked `exhausted` and is not retried automatically. We don't currently auto-disable an endpoint after repeated failures — check your delivery history periodically if you want to catch a persistently failing endpoint.
+
+Each delivery has one of these statuses:
+
+| Status | Meaning |
+| --- | --- |
+| `pending` | Delivery is queued or currently being attempted/retried. |
+| `succeeded` | We received a `2xx` response. |
+| `exhausted` | All attempts failed; delivery has stopped retrying. |
+
+### Viewing delivery history
+
+```bash
+curl https://api.paygood.com/merchants/{merchant_id}/webhook-endpoints/{webhook_endpoint_id}/deliveries \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Supports `status`, `limit`, and `cursor` query parameters. Each delivery includes its attempt history (`attemptNumber`, `attemptedAt`, `responseStatusCode`, `durationMs`, `errorMessage`) — useful for debugging why a delivery failed.
+
+### Manually redelivering
+
+```bash
+curl -X POST https://api.paygood.com/merchants/{merchant_id}/webhook-endpoints/{webhook_endpoint_id}/deliveries/{webhook_del
+ivery_id}/redeliver \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Idempotency-Key: a-unique-key-for-this-request"
+```
+
+This creates a new, independent delivery (linked back to the original via `redeliveredFromId`) — it doesn't retry or mutate the original.
+
+## Managing endpoints
+
+| Action | Request |
+| --- | --- |
+| List endpoints | `GET /merchants/{merchant_id}/webhook-endpoints` |
+| Create endpoint | `POST /merchants/{merchant_id}/webhook-endpoints` |
+| Update endpoint | `PATCH /merchants/{merchant_id}/webhook-endpoints/{webhook_endpoint_id}` |
+| Delete endpoint | `DELETE /merchants/{merchant_id}/webhook-endpoints/{webhook_endpoint_id}` |
+| Rotate signing secret | `POST /merchants/{merchant_id}/webhook-endpoints/{webhook_endpoint_id}/rotate-secret` |
+
+Updating an endpoint lets you change its `url`, `name`, `eventTypes`, or `status` (`active` or `disabled` — disabling pauses deliveries without deleting the endpoint). There's no way to fetch a single endpoint by ID directly; use the list endpoint and filter client-side.
+
+<Warning>
+  Rotating the signing secret immediately invalidates the previous secret for signature verification. Plan for a brief cutover window in your integration if you rotate secrets on a live endpoint.
+</Warning>
+
+## Authentication
+
+All webhook management endpoints use the same authentication as the rest of the Merchant API — send your API key as a bearer token. No separate credential is needed to manage webhook endpoints.
