@@ -24,17 +24,19 @@ PayGood is a REST API that gives you everything you need to accept payments, man
   <Card title="Invoices" icon="file-invoice" href="/guides/invoices">
     Create draft invoices, revise line items, mark as paid, or void. Track every change with append-only revision history.
   </Card>
+
+  <Card title="Subscriptions" icon="repeat" href="/guides/subscriptions">
+    Set up fixed-duration or indefinite subscriptions
+  </Card>
 </CardGroup>
 
 ## Supported currencies
 
-PayGood currently supports the following currencies for payment processing:
+PayGood currently supports the following currencies:
 
 - **USD** — United States Dollar
 - **CAD** — Canadian Dollar
 
-Specify the currency using its three-letter ISO 4217 code when creating a payment. Additional currencies are planned — check the changelog for updates.
-
 ## Idempotent requests
 
-All write operations (such as creating a payment or a customer) accept an `idempotencyKey` field in the request body. Supplying a unique key lets you safely retry a request if you experience a network timeout or other transient error — PayGood will return the result of the original operation rather than creating a duplicate. Use a UUID or another sufficiently unique string as your idempotency key.
+All write operations (such as creating a payment or a customer) accept an `Idempotency-Key` header. Supplying a unique key lets you safely retry a request if you experience a network timeout or other transient error — PayGood will return the result of the original operation rather than creating a duplicate.

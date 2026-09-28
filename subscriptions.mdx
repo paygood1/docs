@@ -1,0 +1,184 @@
+---
+title: "Subscriptions"
+---
+
+Subscriptions let you charge a customer on a recurring interval — daily, weekly, monthly, or yearly — against a fixed price, without building your own billing scheduler.
+
+The model has two parts:
+
+1. A **subscription offering** — a reusable, customer-agnostic "plan" built from one of your [catalog prices](/catalog/prices). It has its own checkout link.
+2. A **subscription** — one customer's enrollment in an offering, tied to a specific payment instrument.
+
+<Note>
+  Subscriptions are fixed-amount only. There's no usage-based or metered billing today, and pricing is fully snapshotted from the offering at creation time — changing or archiving the underlying price never affects subscriptions that already exist.
+</Note>
+
+## Creating an offering
+
+An offering wraps a `RECURRING`-type catalog price into something customers can subscribe to.
+
+<Note>
+  Why `priceId` and not `productId` here? A price already points at exactly one product, so the offering endpoint only needs the price — it looks up the product through it rather than asking you to pass both. In other words, `productId` isn't a separate input to this call; it's metadata the price carries along and the offering inherits.
+</Note>
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.paygood.com/subscriptions/offerings \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: a-unique-key-for-this-request" \
+  -d '{
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "priceId": "price_01hxy8m1nqk9g3x3y3p0azq2cc",
+    "totalPeriods": 12 // optional, omit for indefinite subscription
+  }'
+```
+
+</CodeGroup>
+
+<ParamField body="merchantId" type="string" required>
+</ParamField>
+
+<ParamField body="priceId" type="string" required>
+  A catalog price with `type: "RECURRING"` and a valid `interval` (`day`, `week`, `month`, or `year`). The offering snapshots the price's amount, currency, interval, and retry policy at creation time.
+</ParamField>
+
+<ParamField body="totalPeriods" type="integer">
+  Optional. If set, subscriptions created from this offering run for a fixed number of billing periods and then move to `completed` automatically. Omit it for an open-ended subscription that bills until canceled.
+</ParamField>
+
+The response includes a `checkoutUrl` built from the offering's slug — anyone who completes checkout at that URL mints their own subscription against this offering, without you calling `POST /subscriptions` yourself. This is the simplest way to sell a recurring plan without building your own checkout.
+
+## Creating a subscription directly
+
+If you're collecting payment details yourself (rather than using the hosted checkout link), enroll a customer directly against an existing offering:
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST https://api.paygood.com/subscriptions \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: a-unique-key-for-this-request" \
+  -d '{
+    "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+    "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+    "offeringId": "suboff_01hxy8m1nqk9g3x3y3p0azq2dd",
+    "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2ee"
+  }'
+```
+
+</CodeGroup>
+
+<ParamField body="merchantId" type="string" required>
+</ParamField>
+
+<ParamField body="customerId" type="string" required>
+</ParamField>
+
+<ParamField body="offeringId" type="string" required>
+  The offering to enroll the customer in — not a raw price. Create an offering first (see above).
+</ParamField>
+
+<ParamField body="paymentInstrumentId" type="string" required>
+  A previously-vaulted payment instrument to charge on each billing cycle.
+</ParamField>
+
+<Warning>
+  There's no way to create a subscription straight from a `priceId` — you always go through an offering first, even for a one-off direct API integration.
+</Warning>
+
+### Response
+
+```json
+{
+  "subscriptionId": "sub_01hxy8m1nqk9g3x3y3p0azq2ff",
+  "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+  "customerId": "cust_01hxy8m1nqk9g3x3y3p0azq2zz",
+  "offeringId": "suboff_01hxy8m1nqk9g3x3y3p0azq2dd",
+  "paymentInstrumentId": "pi_01hxy8m1nqk9g3x3y3p0azq2ee",
+  "interval": "month",
+  "amount": 2999,
+  "currency": "USD",
+  "totalPeriods": 12,
+  "status": "active",
+  "canceledAt": null,
+  "createdAt": "2026-09-27T14:32:10.000Z"
+}
+```
+
+<Note>
+  The first period is due immediately at creation, but if you created the subscription via the direct API, that first charge is collected on the **next daily billing run** — not synchronously in the create response. If a customer subscribes through the hosted **checkout link** instead, the first charge is collected synchronously as part of checkout, so the page can show a result immediately.
+</Note>
+
+## Listing and fetching subscriptions
+
+```bash
+curl "https://api.paygood.com/subscriptions?merchantId={merchant_id}&customerId={customer_id}&status=active" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+curl https://api.paygood.com/subscriptions/{subscription_id}?merchantId={merchant_id} \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+Both support filtering by `status` and cursor pagination (`limit`, `cursor`).
+
+## Canceling a subscription
+
+```bash
+curl -X PUT https://api.paygood.com/subscriptions/{subscription_id}/cancel \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg"}'
+```
+
+Cancellation is immediate and idempotent — calling it again on an already-canceled subscription is a no-op. Any not-yet-collected charge for the current period is abandoned; there's no partial refund or proration of the current period.
+
+<Warning>
+  There's currently no pause/resume, and no plan-change or upgrade/downgrade endpoint. To move a customer to a different price, cancel their subscription and create a new one against a different offering.
+</Warning>
+
+## Status lifecycle
+
+<ResponseField name="status" type="string">
+  One of:
+
+  - `active` — billing normally.
+  - `completed` — reached the offering's `totalPeriods` and finished successfully. Only applies to fixed-duration offerings.
+  - `failed` — the retry policy was exhausted after a payment failure. Terminal; there's no reactivation flow.
+  - `canceled` — you (or the customer) canceled it.
+</ResponseField>
+
+<Note>
+  There's no `trialing`, `past_due`, `paused`, or `incomplete` status. If you're porting logic from another billing platform, map any "grace period" handling to watching for `SubscriptionFailed` instead of a distinct status.
+</Note>
+
+## Billing and retries
+
+Charges are collected by a daily billing run, not in real time as periods roll over. Each subscription bills on an anchor schedule derived from its interval — for month/year intervals, a day that doesn't exist in a shorter month clamps down and then reverts in later months (e.g. a Jan 31 anchor bills Feb 28, then Mar 31).
+
+If a charge attempt fails, it's retried according to the offering's retry policy (default: **3 attempts, 1 day apart**). If every attempt fails, the subscription moves to `failed` and a `subscriptions.SubscriptionFailed` event is published — there's no further automatic retry after that.
+
+<Note>
+  An ACH return on an already-succeeded charge is handled separately from a decline: it reopens that period's billing so a fresh attempt cycle runs (with a full new retry budget), rather than immediately failing the subscription.
+</Note>
+
+## Events
+
+Subscription lifecycle events are published as integration events (via the transactional outbox):
+
+| Event type | Fired when… |
+| --- | --- |
+| `subscriptions.SubscriptionCharged` | A billing period is successfully collected |
+| `subscriptions.SubscriptionFailed` | The retry policy is exhausted and the subscription stops billing |
+| `subscriptions.SubscriptionCompleted` | A fixed-duration subscription finishes its last period |
+
+<Warning>
+  These events are **not yet available as webhooks** — they aren't in the webhook-eligible event list (see [Webhooks](/webhooks#event-types)). If you need to react to subscription billing outcomes today, you'll need to poll `GET
+  /subscriptions` or `GET /subscriptions/{id}`. Let us know if webhook support for these events would unblock your integration.
+</Warning>
+
+## Authentication and idempotency
+
+Subscription endpoints use the same `Authorization: Bearer` API key as the rest of the Merchant API. `POST /subscriptions` and `POST /subscriptions/offerings` both require an `Idempotency-Key` header — a retried request with the same key returns the original record rather than creating a duplicate. `PUT /subscriptions/{id}/cancel` doesn't need one, since cancellation is idempotent by nature.

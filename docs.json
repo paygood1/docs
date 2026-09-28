@@ -29,6 +29,7 @@
               "guides/payment-instruments",
               "guides/invoices",
               "webhooks",
+              "subscriptions",
               "webhooks"
             ]
           },
