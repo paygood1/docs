@@ -8181,7 +8181,8 @@
             "enum": [
               "active",
               "canceled",
-              "failed"
+              "failed",
+              "completed"
             ]
           },
           "paymentId": {
@@ -9090,12 +9091,20 @@
             "minLength": 3,
             "maxLength": 3
           },
+          "totalPeriods": {
+            "description": "Fixed number of billing periods before this subscription auto-completes. Absent means indefinite.",
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
+          },
           "status": {
             "type": "string",
             "enum": [
               "active",
               "canceled",
-              "failed"
+              "failed",
+              "completed"
             ]
           },
           "canceledAt": {
@@ -9130,6 +9139,13 @@
           },
           "priceId": {
             "type": "string"
+          },
+          "totalPeriods": {
+            "description": "Fixed number of billing periods before a subscription minted from this offering auto-completes. Omit for an indefinite subscription.",
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
           }
         },
         "required": [
@@ -9172,6 +9188,13 @@
             "type": "string",
             "minLength": 3,
             "maxLength": 3
+          },
+          "totalPeriods": {
+            "description": "Fixed number of billing periods before a subscription minted from this offering auto-completes. Absent means indefinite.",
+            "type": "integer",
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991,
+            "minimum": 0
           },
           "checkoutUrl": {
             "type": "string",
@@ -9240,12 +9263,20 @@
                   "minLength": 3,
                   "maxLength": 3
                 },
+                "totalPeriods": {
+                  "description": "Fixed number of billing periods before this subscription auto-completes. Absent means indefinite.",
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
                 "status": {
                   "type": "string",
                   "enum": [
                     "active",
                     "canceled",
-                    "failed"
+                    "failed",
+                    "completed"
                   ]
                 },
                 "canceledAt": {
@@ -9350,12 +9381,20 @@
                   "minLength": 3,
                   "maxLength": 3
                 },
+                "totalPeriods": {
+                  "description": "Fixed number of billing periods before this subscription auto-completes. Absent means indefinite.",
+                  "type": "integer",
+                  "exclusiveMinimum": true,
+                  "maximum": 9007199254740991,
+                  "minimum": 0
+                },
                 "status": {
                   "type": "string",
                   "enum": [
                     "active",
                     "canceled",
-                    "failed"
+                    "failed",
+                    "completed"
                   ]
                 },
                 "canceledAt": {
@@ -10118,6 +10157,11 @@
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
           },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
           "businessProfile": {
             "type": "object",
             "properties": {
@@ -10727,6 +10771,7 @@
           "amendmentsNote",
           "feeProfileId",
           "createdAt",
+          "updatedAt",
           "businessProfile",
           "beneficialOwners",
           "underwritingData",
@@ -13328,6 +13373,385 @@
           "applicationsInProgress"
         ]
       },
+      "ConsoleMerchantApplicationSummaryResponseDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "description": "Null means unbounded (all-time) on this side.",
+                "nullable": true
+              },
+              "end": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "counts": {
+            "type": "object",
+            "properties": {
+              "draft": {
+                "type": "number",
+                "description": "Windowed against createdAt."
+              },
+              "submitted": {
+                "type": "number",
+                "description": "Windowed against submittedAt."
+              },
+              "processor_review": {
+                "type": "number",
+                "description": "Windowed against submittedAt."
+              },
+              "amendments_required": {
+                "type": "number",
+                "description": "Windowed against submittedAt."
+              },
+              "approved": {
+                "type": "number",
+                "description": "Windowed against approvedAt."
+              }
+            },
+            "required": [
+              "draft",
+              "submitted",
+              "processor_review",
+              "amendments_required",
+              "approved"
+            ],
+            "description": "Application count per status, each windowed against the date field meaningful to that status."
+          }
+        },
+        "required": [
+          "period",
+          "counts"
+        ]
+      },
+      "ConsoleMerchantApplicationBoardResponseDto": {
+        "type": "object",
+        "properties": {
+          "period": {
+            "type": "object",
+            "properties": {
+              "start": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "description": "Null means unbounded (all-time) on this side.",
+                "nullable": true
+              },
+              "end": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                "nullable": true
+              }
+            },
+            "required": [
+              "start",
+              "end"
+            ]
+          },
+          "groups": {
+            "type": "object",
+            "properties": {
+              "draft": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "doingBusinessAs": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "memberEmail": {
+                      "type": "string",
+                      "description": "Null when the creating member could not be resolved.",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    },
+                    "approvedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "description": "Null except for applications in the approved group.",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "legalName",
+                    "doingBusinessAs",
+                    "country",
+                    "memberEmail",
+                    "createdAt",
+                    "submittedAt",
+                    "approvedAt"
+                  ]
+                }
+              },
+              "submitted": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "doingBusinessAs": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "memberEmail": {
+                      "type": "string",
+                      "description": "Null when the creating member could not be resolved.",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    },
+                    "approvedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "description": "Null except for applications in the approved group.",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "legalName",
+                    "doingBusinessAs",
+                    "country",
+                    "memberEmail",
+                    "createdAt",
+                    "submittedAt",
+                    "approvedAt"
+                  ]
+                }
+              },
+              "processor_review": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "doingBusinessAs": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "memberEmail": {
+                      "type": "string",
+                      "description": "Null when the creating member could not be resolved.",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    },
+                    "approvedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "description": "Null except for applications in the approved group.",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "legalName",
+                    "doingBusinessAs",
+                    "country",
+                    "memberEmail",
+                    "createdAt",
+                    "submittedAt",
+                    "approvedAt"
+                  ]
+                }
+              },
+              "amendments_required": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "doingBusinessAs": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "memberEmail": {
+                      "type": "string",
+                      "description": "Null when the creating member could not be resolved.",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    },
+                    "approvedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "description": "Null except for applications in the approved group.",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "legalName",
+                    "doingBusinessAs",
+                    "country",
+                    "memberEmail",
+                    "createdAt",
+                    "submittedAt",
+                    "approvedAt"
+                  ]
+                }
+              },
+              "approved": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "legalName": {
+                      "type": "string"
+                    },
+                    "doingBusinessAs": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "country": {
+                      "type": "string"
+                    },
+                    "memberEmail": {
+                      "type": "string",
+                      "description": "Null when the creating member could not be resolved.",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    "submittedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "nullable": true
+                    },
+                    "approvedAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$",
+                      "description": "Null except for applications in the approved group.",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "legalName",
+                    "doingBusinessAs",
+                    "country",
+                    "memberEmail",
+                    "createdAt",
+                    "submittedAt",
+                    "approvedAt"
+                  ]
+                },
+                "description": "The only group filtered by the requested `start`/`end` window (against approvedAt); every other group returns its full current membership."
+              }
+            },
+            "required": [
+              "draft",
+              "submitted",
+              "processor_review",
+              "amendments_required",
+              "approved"
+            ],
+            "description": "Applications grouped by current status."
+          }
+        },
+        "required": [
+          "period",
+          "groups"
+        ]
+      },
       "InitiateDisputeEvidenceUploadResponseDto": {
         "type": "object",
         "properties": {
@@ -13767,6 +14191,150 @@
           "isOverdue",
           "customer",
           "evidenceFiles"
+        ]
+      },
+      "ListGhlConnectionsResponseDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "integrationId": {
+                  "type": "string"
+                },
+                "merchantId": {
+                  "type": "string"
+                },
+                "externalLocationId": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "disconnectedAt": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "integrationId",
+                "merchantId",
+                "externalLocationId",
+                "status",
+                "createdAt",
+                "disconnectedAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "StartGhlConnectResponseDto": {
+        "type": "object",
+        "properties": {
+          "authorizeUrl": {
+            "type": "string",
+            "format": "uri"
+          }
+        },
+        "required": [
+          "authorizeUrl"
+        ]
+      },
+      "DisconnectGhlLocationResponseDto": {
+        "type": "object",
+        "properties": {
+          "disconnected": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "disconnected"
+        ]
+      },
+      "ConnectGhlLocationResponseDto": {
+        "type": "object",
+        "properties": {
+          "integrationId": {
+            "type": "string"
+          },
+          "apiKey": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "integrationId",
+          "apiKey"
+        ]
+      },
+      "BootstrapGhlCheckoutSessionResponseDto": {
+        "type": "object",
+        "properties": {
+          "integrationId": {
+            "type": "string"
+          },
+          "customerId": {
+            "type": "string"
+          },
+          "intentToken": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "integrationId",
+          "customerId",
+          "intentToken"
+        ]
+      },
+      "CompleteGhlCheckoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "chargeId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chargeId",
+          "status"
+        ]
+      },
+      "CompleteGhlSetupResponseDto": {
+        "type": "object",
+        "properties": {
+          "paymentInstrumentId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentInstrumentId"
+        ]
+      },
+      "CompleteGhlSubscriptionCheckoutResponseDto": {
+        "type": "object",
+        "properties": {
+          "subscriptionId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "subscriptionId",
+          "status"
         ]
       }
     }
