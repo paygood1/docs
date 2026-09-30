@@ -20,7 +20,7 @@ curl -X POST https://api.paygood.com/merchants/{merchant_id}/webhook-endpoints \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: a-unique-key-for-this-request" \
   -d '{
-    "url": "https://example.com/webhooks/paygood",
+    "url": "https://example.n8n.com/webhooks/paygood",
     "name": "Production endpoint",
     "eventTypes": ["payments.PaymentCreated", "payments.PaymentDeclined"]
   }'

@@ -29,7 +29,10 @@ This guide walks you through the full invoice lifecycle: create a draft, revise 
                 "productId": "prod_01hxy8m1nqk9g3x3y3p0azq2c1",
                 "description": "Consulting package",
                 "quantity": 1,
-                "unitAmount": 10000
+    			// either provide unitAmount (manual price)
+    			// or priceId (pre-configured price)
+                "unitAmount": 10000,
+                "priceId": "price_01jdkslafjkasjdalkfjsf",
               },
               {
                 "kind": "manual_adjustment",
