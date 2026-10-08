@@ -1,0 +1,237 @@
+---
+title: "MCP"
+---
+
+The PayGood MCP server lets an AI coding assistant work against your merchant account directly. It can read the API surface, walk through a first integration, tokenize a test card, create a customer, and create a payment, without you copying values between the docs and your editor.
+
+It uses the same merchant API keys as the [PayGood HTTP API](/api-reference). It doesn't have its own credentials.
+
+## Environments
+
+| Environment | MCP URL | Read tools | Write tools |
+| --- | --- | --- | --- |
+| Sandbox | `https://api-sandbox.paygood.co/mcp/dev` | Enabled | Enabled |
+| Production | `https://api.paygood.co/mcp/dev` | Enabled | **Disabled** |
+
+<Warning>
+  The production MCP server is **read-only**. Tools that create customers, prices, payment instruments, payments, or subscription offerings return an error in production. Build and test your integration in the sandbox, then ship the resulting code against the production HTTP API.
+</Warning>
+
+Sandbox and production use separate API keys. A sandbox key doesn't work against production, and a production key doesn't work against sandbox.
+
+## Connect your client
+
+<Tabs>
+  <Tab title="Cursor">
+    Add the server to `.cursor/mcp.json` in your project, or to `~/.cursor/mcp.json` to use it in every project.
+
+    <CodeGroup>
+
+    ```json Sandbox
+    {
+      "mcpServers": {
+        "paygood": {
+          "url": "https://api-sandbox.paygood.co/mcp/dev",
+          "headers": {
+            "Authorization": "Bearer <YOUR_SANDBOX_API_KEY>"
+          }
+        }
+      }
+    }
+    ```
+
+    ```json Production (read-only)
+    {
+      "mcpServers": {
+        "paygood-production": {
+          "url": "https://api.paygood.co/mcp/dev",
+          "headers": {
+            "Authorization": "Bearer <YOUR_PRODUCTION_API_KEY>"
+          }
+        }
+      }
+    }
+    ```
+
+    </CodeGroup>
+
+    Open **Settings → MCP** and confirm the server shows as connected with its tools listed.
+  </Tab>
+  <Tab title="Claude Code">
+    Run one of these commands in your terminal.
+
+    <CodeGroup>
+
+    ```bash Sandbox
+    claude mcp add --transport http paygood \
+      https://api-sandbox.paygood.co/mcp/dev \
+      --header "Authorization: Bearer $PAYGOOD_SANDBOX_API_KEY"
+    ```
+
+    ```bash Production (read-only)
+    claude mcp add --transport http paygood-production \
+      https://api.paygood.co/mcp/dev \
+      --header "Authorization: Bearer $PAYGOOD_PRODUCTION_API_KEY"
+    ```
+
+    </CodeGroup>
+
+    Run `claude mcp list` to confirm the server is connected, or type `/mcp` inside a session.
+  </Tab>
+  <Tab title="Other clients">
+    Any client that supports MCP over Streamable HTTP can connect. You need two values:
+
+    - **URL:** the MCP URL for your environment from the table above.
+    - **Header:** `Authorization: Bearer <YOUR_API_KEY>`
+
+    If your client only supports local (stdio) servers, bridge to the remote server with [`mcp-remote`](https://www.npmjs.com/package/mcp-remote):
+
+    ```json
+    {
+      "mcpServers": {
+        "paygood": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "mcp-remote",
+            "https://api-sandbox.paygood.co/mcp/dev",
+            "--header",
+            "Authorization:${PAYGOOD_AUTH}"
+          ],
+          "env": {
+            "PAYGOOD_AUTH": "Bearer <YOUR_SANDBOX_API_KEY>"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+<Tip>
+  Name the sandbox and production servers differently, as in the examples above, so your assistant and your tool-call approvals never confuse the two.
+</Tip>
+
+## Verify the connection
+
+Ask your assistant:
+
+> Use the PayGood MCP server to get the integration checklist.
+
+A successful response returns the ordered steps for a first merchant API integration. If you get an authentication error instead, see [Troubleshooting](#troubleshooting).
+
+## Available tools
+
+### Read tools
+
+Available in sandbox and production.
+
+| Tool | What it does |
+| --- | --- |
+| `get_integration_checklist` | Returns the ordered steps for a first PayGood integration. |
+| `get_integration_skill` | Returns the full instructions for a published integration workflow, such as `register-payment-instrument`. |
+| `get_merchant_openapi_slice` | Returns the merchant API operations for one topic, without loading the whole OpenAPI document. |
+| `explain_error` | Turns a PayGood API error into next-step guidance. |
+| `list_payments` | Lists payments, newest first, with cursor pagination. |
+| `list_invoices` | Lists invoices, newest first. Supports customer and status filters. |
+| `list_subscriptions` | Lists subscriptions, newest first. Supports customer and status filters. |
+| `list_subscription_offerings` | Lists your subscription offerings. |
+
+### Write tools
+
+Available in **sandbox only**.
+
+| Tool | What it does |
+| --- | --- |
+| `create_or_get_customer` | Finds a customer by email, or creates one. |
+| `create_tokenization_intent` | Creates a tokenization intent for a customer. |
+| `create_tokenization_session` | Exchanges a tokenization intent for a session key used to tokenize a card. |
+| `register_payment_instrument` | Registers a payment instrument from a tokenized card reference. |
+| `create_or_get_price` | Finds or creates a catalog price for an amount and currency. |
+| `create_payment` | Creates a one-time payment using a payment instrument and a price. |
+| `create_subscription_offering` | Creates a reusable subscription offering and returns its checkout URL. |
+
+## How write tools confirm
+
+Every tool that creates or changes data uses a two-step confirmation, so your assistant can't change anything on a single unreviewed call.
+
+<Steps>
+  <Step title="Preview">
+    The first call returns a preview of exactly what would happen, along with a `confirmationToken`. Nothing is created.
+  </Step>
+  <Step title="Confirm">
+    Your assistant calls the tool again with the same arguments and the returned `confirmationToken`. Only then does the action run.
+  </Step>
+</Steps>
+
+The token expires after 5 minutes. It is tied to your merchant and to the exact arguments and idempotency key from the preview. If anything changes between the two calls, the confirmation is rejected and you need to preview again.
+
+## Create a test payment in the sandbox
+
+Card numbers never go through the MCP server. Your assistant tokenizes a sandbox test card with Basis Theory using a short-lived session key, then passes only the resulting token reference to PayGood.
+
+Ask your assistant:
+
+> Using the PayGood MCP server, create a \$5 test payment for a new customer in the sandbox. Start with the `register-payment-instrument` skill.
+
+Behind the scenes it follows this flow:
+
+<Steps>
+  <Step title="Find or create the customer">
+    `create_or_get_customer`
+  </Step>
+  <Step title="Create a tokenization intent">
+    `create_tokenization_intent` (preview, then confirm) returns a `tokintent_...` value.
+  </Step>
+  <Step title="Get a tokenization session">
+    `create_tokenization_session` exchanges the intent for a `sessionKey`.
+  </Step>
+  <Step title="Tokenize a sandbox test card">
+    Your assistant sends a sandbox test card to Basis Theory's `/token-intents` endpoint, authenticating with the `sessionKey` as the `BT-API-KEY` header. This step happens outside the MCP server. Test card numbers are in the `register-payment-instrument` skill, which you can read with `get_integration_skill`.
+  </Step>
+  <Step title="Register the payment instrument">
+    `register_payment_instrument` (preview, then confirm) with the token intent ID from the previous step.
+  </Step>
+  <Step title="Create the price and payment">
+    `create_or_get_price` with the amount in cents (`500` is \$5.00), then `create_payment` (preview, then confirm) with the returned `priceId`.
+  </Step>
+</Steps>
+
+<Warning>
+  Test card numbers work in the sandbox only. Never send real card data to an AI assistant or through the MCP server. In production, collect cards with the PayGood secure component in your own front end.
+</Warning>
+
+## Security and limits
+
+- **API key scope.** The server accepts merchant API keys only. Each tool call is checked against your key's capabilities, and a key revoked mid-session is rejected on the next call.
+- **No card data.** The server never accepts or returns card numbers, bank account numbers, or tax IDs.
+- **Rate limit.** 100 requests per API key every 15 minutes. Exceeding it returns HTTP `429`.
+- **Merchant scope.** Tools act only on the merchant that owns the API key. There is no merchant ID argument to change.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="401 or authentication error">
+    Check that the header is exactly `Authorization: Bearer <key>`, that the key hasn't been revoked, and that it belongs to the environment you're connecting to. Sandbox keys don't work in production, and the reverse.
+  </Accordion>
+
+  <Accordion title="403 or “operation disabled” on a write tool">
+    You're connected to production, where write tools are disabled. Connect to the sandbox to create customers, payment instruments, and payments.
+  </Accordion>
+
+  <Accordion title="403 or “insufficient capabilities”">
+    Your API key is missing a capability the tool needs. See [Before you begin](#before-you-begin) for the capability each tool requires, then create a key with the right capabilities.
+  </Accordion>
+
+  <Accordion title="Confirmation token rejected or expired">
+    Previews expire after 5 minutes, and the confirming call must use the same arguments and idempotency key as the preview. Ask your assistant to preview again, then confirm.
+  </Accordion>
+
+  <Accordion title="404 on the MCP URL">
+    Use the full path, including `/mcp/dev`. For example, `https://api-sandbox.paygood.co/mcp/dev`.
+  </Accordion>
+
+  <Accordion title="429 Too Many Requests">
+    You've hit the per-key limit of 100 requests per 15 minutes. Wait for the window to reset.
+  </Accordion>
+</AccordionGroup>

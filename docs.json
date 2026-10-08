@@ -30,7 +30,8 @@
               "guides/invoices",
               "webhooks",
               "webhooks",
-              "subscriptions"
+              "subscriptions",
+              "mcp"
             ]
           }
         ]

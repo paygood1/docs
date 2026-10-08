@@ -14,6 +14,10 @@ This guide walks you through the full invoice lifecycle: create a draft, revise 
   <Step title="Create a draft invoice">
     Send `POST /invoices` with the merchant and customer references and a list of line items. Line items can be `product_charge` items pulled from your catalog, `manual_adjustment` items for things like tax or shipping, or a mix of both.
 
+    <Tip>
+      If you need an automatic email sent to additional team members when an invoice is paid, pass a list of email addresses into `additionalNotificationEmails` . 
+    </Tip>
+
     ```bash
     curl -X POST https://api.paygood.co/invoices \
           -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
@@ -42,9 +46,10 @@ This guide walks you through the full invoice lifecycle: create a draft, revise 
             ],
             "dueDate": "2026-10-15T00:00:00.000Z",
             "acceptedPaymentMethods": ["card"],
+    	  "additionalNotificationEmails": ["accounting@example.com"],
             "metadata": {
               "orderId": "ord_123",
-              "source": "campaign-ad-123"
+              "source": "campaign_123"
             }
           }'
     ```
