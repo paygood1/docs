@@ -102,13 +102,15 @@ Only the event types below can be subscribed to today. Requesting any other even
 
 | Event type | Fired when… | Payload fields |
 | --- | --- | --- |
-| `payments.PaymentCreated` | A payment is created | `paymentId`, `paymentInstrumentId`, `priceId`, `processor`, |
-| `customerId`, `merchantId`, `amount`, `currency`, `occurredAt` |  |  |
-| `payments.PaymentDeclined` | A payment attempt is declined | `paymentId`, `merchantId`, `processor`, `declineCode`, |
-| `declineMessage`, `occurredAt` |  |  |
+| `payments.PaymentCreated` | A payment is created | `paymentId`, `paymentInstrumentId`, `priceId`, `processor`,`customerId`, `merchantId`, `amount`, `currency`, `occurredAt` |
+| `payments.PaymentDeclined` | A payment attempt is declined | `paymentId`, `merchantId`, `processor`, `declineCode`,`declineMessage`, `occurredAt` |
 | `payments.PaymentRefunded` | A payment is refunded | `refundId`, `paymentId`, `merchantId`, `refundedAmount`, `currency`, `processorReferenceId`, `occurredAt` |
 | `payments.PaymentReturned` | A payment is returned (e.g. ACH return) | `returnId`, `paymentId`, `merchantId`, `returnedAmount`, `currency`, `processorReferenceId`, `occurredAt` |
 | `payouts.PayoutCreated` | A payout is created | `payoutId`, `merchantId`, `payoutAccountId`, `processor`, `grossAmount`, `feeAmount`, `netAmount`, `currency`, `occurredAt` |
+| `subscriptions.SubscriptionCreated` | A subscription is created | `subscriptionId`, `merchantId`, `customerId`, `paymentInstrumentId`, `occurredAt` |
+| `subscriptions.SubscriptionCharged` | A scheduled subscription charge is successfully captured Note: for bank payments, this webhook will be fired once funds settle to your account a few business days later. | `subscriptionId`, `intentId`, `attemptId`, `paymentId`, `merchantId`, `customerId`, `amount`, `currency`, `occurredAt` |
+| `subscriptions.SubscriptionFailed` | A billing period's charge attempts are exhausted and the subscription is marked failed | `subscriptionId`, `merchantId`, `customerId`, `lastAttemptId`, `occurredAt` |
+| `subscriptions.SubscriptionCompleted` | The final charge of a fixed-length subscription is captured, so all billing periods are done | `subscriptionId`, `merchantId`, `customerId`, `totalPeriods`, `occurredAt` |
 | `invoices.InvoiceSent` | An invoice is sent (or resent) | `invoiceId`, `merchantId`, `customerId`, `invoiceNumber`,`resend`, `occurredAt` |
 | `invoices.InvoicePaid` | An invoice is paid in full | `invoiceId`, `merchantId`, `customerId`, `invoiceNumber`, `amount`,`currency`, `paidAt` |
 
