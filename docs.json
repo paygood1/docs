@@ -28,9 +28,10 @@
               "guides/manage-customers",
               "guides/payment-instruments",
               "guides/invoices",
-              "webhooks",
-              "subscriptions",
-              "mcp"
+              "guides/webhooks",
+              "guides/subscriptions",
+              "guides/mcp",
+              "guides/catalog"
             ]
           }
         ]
