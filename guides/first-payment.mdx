@@ -48,18 +48,21 @@ This guide walks you through processing your first payment with PayGood. By the 
     A payment instrument is a tokenized card or bank account linked to your customer. Tokenize the raw card data with our collect component first, then pass the resulting token to PayGood. Some server-side setup is required to initialize the component - see [core package](https://www.npmjs.com/package/@paygood1/collect-core) / [React package](https://www.npmjs.com/package/@paygood1/collect-react) docs
 
     ```bash
-    curl -X POST https://api.paygood.co/payment-instruments \
-      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-      -H 'Content-Type: application/json' \
-      -H 'Idempotency-Key: pmt-instrument-create-001' \
-      -d '{
-        "customerId": "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
-        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-        "type": "card",
-        "vaultToken": {
-          "id": "tok_01hxy9n3prk9h4y4z4q1bar3ch",
-        }
-      }'
+    curl -X POST
+      https://api.paygood.co/payment-instruments \
+        -H "Authorization: Bearer $PAYGOOD_API_KEY" \
+        -H "Content-Type: application/json" \
+        -H "Idempotency-Key: pi-create-002" \
+        -d '{
+          "customerId":
+      "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
+          "instrumentHolderName": "Amadou Bamba",
+          "vaultToken": {
+            "id": "tok_01hxyc0u3vl9m9d9e9v6gft7il",
+            "provider": "basistheory",
+            "kind": "token_intent"
+          }
+        }'
     ```
 
     Save the `paymentInstrumentId` from the response.
