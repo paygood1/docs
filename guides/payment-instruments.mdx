@@ -8,7 +8,7 @@ A payment instrument is a tokenized card or bank account linked to a customer. Y
 
 ## How tokenization works
 
-Raw card and bank account data never touches PayGood's servers. Before registering an instrument, you tokenize the sensitive data using a supported vault provider, which will return an opaque token ID that represents the underlying data.
+Raw card and bank account data never touches PayGood's servers. Before registering an instrument, you tokenize the sensitive data using one of our published components, which will return an opaque token ID that represents the underlying data. 
 
 You then pass that token ID to PayGood via `POST /payment-instruments`. PayGood forwards it to the payment processor on your behalf during a charge. This architecture means your integration never handles raw PANs or routing numbers, keeping you out of PCI scope.
 
@@ -18,17 +18,24 @@ We provide two NPM packages you can integrate into your website to collect a car
 
 collect-core: [link](https://www.npmjs.com/package/@paygood1/collect-core) , collect-react: [link](https://www.npmjs.com/package/@paygood1/collect-react)
 
-<Info>
-  Due to a temporary issue, initialize the component with `useStockDomain: false` . Once a fix is released, this will no longer be necessary and docs will be updated.
-</Info>
+On successful tokenization, the component will return a shape like this:
 
-Here's what the component looks like:
-
-<Frame>
-  ![Screenshot 2026 08 09 At 6 42 23 PM](/images/Screenshot-2026-08-09-at-6.42.23-PM.png "Screenshot 2026 08 09 At 6 42 23 PM")
-</Frame>
-
-See package docs for shape of result.
+<Expandable title="payload">
+  ```json
+  { 
+  	"kind": "token",
+  	"tokenId": "tok_...",
+  	"fingerprint": "fp_...",
+  	"type": "bank_account"
+  } |
+  {
+  	"kind": "token_intent",
+  	"tokenIntentId": "ti_card_123",
+    	"fingerprint": "fp_card_123",
+  	"type": "card"
+  }
+  ```
+</Expandable>
 
 ## Register a card instrument
 
@@ -38,13 +45,24 @@ Once you have a vault token for a card, send a `POST /payment-instruments` reque
 curl -X POST https://api.paygood.co/payment-instruments \
   -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
   -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: pmt-ins-1` \
   -d '{
     "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+    "instrumentHolderName": "Amadou Bamba",
     "type": "card",
     "vaultToken": {
       "id": "tok_01hxy9n3prk9h4y4z4q1bar3ch",
-      "provider": "basistheory"
-    }
+      "provider": "basistheory",
+      "kind": "token_intent", 
+      "fingerprint": "fp_123"
+    },
+	"billingAddress": {
+        "line1": "123 Main St",
+        "city": "Minneapolis",
+        "region": "MN",
+        "postalCode": "55401",
+        "country": "USA"
+      }
   }'
 ```
 
@@ -71,16 +89,21 @@ PayGood returns a payment instrument record with masked display details and an i
 To register a bank account, use the same endpoint with `type: "bank_account"` and a vault token that represents the tokenized account details.
 
 ```bash
-curl -X POST https://api.paygood.co/payment-instruments \
-  -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
-    "type": "bank_account",
-    "vaultToken": {
-      "id": "tok_01hxyc0u3vl9m9d9e9v6gft7il",
-    }
-  }'
+curl -X POST
+  https://api.paygood.co/payment-instruments \
+    -H "Authorization: Bearer $PAYGOOD_API_KEY" \
+    -H "Content-Type: application/json" \
+    -H "Idempotency-Key: pi-create-002" \
+    -d '{
+      "customerId":
+  "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
+      "instrumentHolderName": "Amadou Bamba",
+      "vaultToken": {
+        "id": "tok_01hxyc0u3vl9m9d9e9v6gft7il",
+        "provider": "basistheory",
+        "kind": "token_intent"
+      }
+    }'
 ```
 
 The response includes bank account display details instead of card fields.
@@ -99,18 +122,3 @@ The response includes bank account display details instead of card fields.
   "createdAt": "2024-06-01T12:06:00Z"
 }
 ```
-
-## Instrument statuses
-
-An instrument moves through the following statuses after registration.
-
-| Status | Description |
-| --- | --- |
-| `pending` | The instrument has been registered and is being verified by the processor. |
-| `active` | Verification is complete and the instrument can be used to create payments. |
-| `failed` | Verification failed. The instrument cannot be used. Register a new one. |
-| `disabled` | The instrument has been deactivated and can no longer process payments. |
-
-<Tip>
-  Once an instrument reaches `active` status, store its `paymentInstrumentId` in your database. You'll reference it on every payment you create for that customer.
-</Tip>

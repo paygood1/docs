@@ -18,13 +18,13 @@ This guide walks you through processing your first payment with PayGood. By the 
     curl -X POST https://api.paygood.co/merchants/mer_01hxy8m1nqk9g3x3y3p0azq2bg/customers \
       -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
       -H 'Content-Type: application/json' \
+      -H 'Idempotency-Key: cust-create-001' \
       -d '{
         "entityType": "individual",
         "firstName": "Amadou",
         "lastName": "Bamba",
         "email": "amadou@example.com",
         "phone": "+15551234567",
-        "idempotencyKey": "cust-create-001"
       }'
     ```
 
@@ -32,7 +32,7 @@ This guide walks you through processing your first payment with PayGood. By the 
 
     ```json
     {
-      "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+      "customerId": "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
       "name": "Amadou Bamba",
       "displayName": "Amadou Bamba",
       "firstName": "Amadou",
@@ -51,8 +51,9 @@ This guide walks you through processing your first payment with PayGood. By the 
     curl -X POST https://api.paygood.co/payment-instruments \
       -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
       -H 'Content-Type: application/json' \
+      -H 'Idempotency-Key: pmt-instrument-create-001' \
       -d '{
-        "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
+        "customerId": "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
         "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
         "type": "card",
         "vaultToken": {
