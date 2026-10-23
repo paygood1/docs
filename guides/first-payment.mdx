@@ -88,15 +88,16 @@ This guide walks you through processing your first payment with PayGood. By the 
 
     ```bash
     curl -X POST https://api.paygood.co/catalog/prices \
-      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-        "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
-        "amount": 5000,
-        "currency": "USD",
-        "type": "one_time"
-      }'
+        -H "Authorization: Bearer $PAYGOOD_API_KEY" \
+        -H "Content-Type: application/json" \
+        -H "Idempotency-Key: price-create-001" \
+        -d '{
+          "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+          "productId": "prod_01hxy6q4nrk9i5z5a5r2cbr3eh",
+          "amount": 5000,
+          "currency": "USD",
+          "type": "one_time"
+        }'
     ```
 
     Save the `priceId` from the response.
@@ -116,44 +117,47 @@ This guide walks you through processing your first payment with PayGood. By the 
   <Step title="Create a payment">
     You have everything you need. Submit the payment using the IDs you collected in the previous steps.
 
-    Set `captureMethod` to `automatic` to authorize and capture the funds in a single step, which charges the customer immediately.
+    <Info>
+      By default, the API will return a `pending` payment and you can listen for webhooks. If you want the server to delay responding until the payment reaches an outcome, pass a `Prefer: wait=<seconds>` header.
+    </Info>
 
     ```bash
     curl -X POST https://api.paygood.co/payments \
-      -H 'Authorization: Bearer $PAYGOOD_API_KEY' \
-      -H 'Content-Type: application/json' \
-      -d '{
-        "idempotencyKey": "pay-unique-001",
-        "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
-        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-        "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
-        # either set priceId or amount+currency, not both
-        "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
-        "amount": 5000,
-        "currency": "USD",
-        "captureMethod": "automatic"
-      }'
+        -H "Authorization: Bearer $PAYGOOD_API_KEY" \
+        -H "Content-Type: application/json" \
+        -H "Idempotency-Key: pay-unique-001" \ # [!code --]
+        -d '{ # [!code --]
+          "customerId": "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
+          "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+          "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+          "priceId": "price_01hxy7r5osk9j6a6b6s3dcr4fi",
+          "captureMethod": "automatic",
+          "description": "Order #1042",
+          "metadata": { "orderId": "1042" }
+        }'
     ```
 
     A successful response returns the payment record with `status: "captured"`.
 
     ```json
     {
-      "paymentId": "pay_01hxya8s1tk9k7b7c7t4edr5gj",
-      "idempotencyKey": "pay-unique-001",
-      "customerId": "cus_01hxy4m2nqk9g3x3y3p0azq1cf",
-      "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
-      "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
-      "priceId": "prc_01hxy7r5osk9j6a6b6s3dcr4fi",
-      "captureMethod": "automatic",
-      "processor": "finix",
-      "amount": 5000,
-      "currency": "USD",
-      "status": "captured",
-      "createdAt": "2024-06-01T12:03:00Z",
-      "authorizedAt": "2024-06-01T12:03:01Z",
-      "capturedAt": "2024-06-01T12:03:02Z"
-    }
+        "paymentId": "pay_01hxya8s1tk9k7b7c7t4edr5gj",
+        "idempotencyKey": "pay-unique-001",
+        "customerId": "cust_01hxy4m2nqk9g3x3y3p0azq1cf",
+        "merchantId": "mer_01hxy8m1nqk9g3x3y3p0azq2bg",
+        "paymentInstrumentId": "pi_01hxy5p3mqk9h4y4z4q1bar2dg",
+        "priceId": "price_01hxy7r5osk9j6a6b6s3dcr4fi",
+        "captureMethod": "automatic",
+        "description": "Order #1042",
+        "metadata": { "orderId": "1042" },
+        "amount": 5000,
+        "currency": "USD",
+        "status": "captured",
+        "processor": "finix",
+        "createdAt": "2024-06-01T12:03:00Z",
+        "authorizedAt": "2024-06-01T12:03:01Z",
+        "capturedAt": "2024-06-01T12:03:02Z"
+      }
     ```
   </Step>
 </Steps>
@@ -173,5 +177,5 @@ After creation, a payment moves through a lifecycle of statuses. Use these to tr
 | `declined` | The payment was rejected by the processor or the issuing bank. |
 
 <Tip>
-  Always use a unique `idempotencyKey` per payment to safely retry failed requests without double-charging. If a network error occurs, resubmit the same request with the same key — PayGood returns the original result instead of creating a duplicate.
+  Always use a unique `Idempotency-Id` header per payment to safely retry failed requests without double-charging. If a network error occurs, resubmit the same request with the same key — PayGood returns the original result instead of creating a duplicate.
 </Tip>
